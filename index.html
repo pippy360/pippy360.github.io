@@ -7,14 +7,204 @@
 
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
+    <style>
+        #bigBlueOuter{
+
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+    </style>
   </head>
   <body>
     <div class="container">
       <h1>Hello, world!</h1>
+        <div id="bigBlueOuter" >
+          <canvas id="canvas" width="512" height="512">
+          </canvas>
+          <canvas id="bigBlueInner" width="512" height="512">
+          </canvas>
+          <div id="output"></div>
+        </div>
     </div>
     <!-- jQuery first, then Tether, then Bootstrap JS. -->
     <script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
   </body>
+<script>
+
+var isDown = true;
+var mouseDownPoint =
+{
+    x: 0,
+    y: 0
+};
+
+var mouseDownCanvasPoint =
+{
+    x: 0,
+    y: 0
+};
+
+
+var mouseCurrentPoint =
+{
+    x: 0,
+    y: 0
+};
+
+var mouseCurrentCanvasPoint =
+{
+    x: 0,
+    y: 0
+};
+
+
+$("#bigBlueOuter").mousedown(function(e){
+    isDown = true;
+    e.preventDefault();
+    mouseDownPoint.x = e.pageX;
+    mouseDownPoint.y = e.pageY;
+    mouseDownCanvasPoint = getCanvasPoint(e);
+});
+
+
+var scale;
+var savedRotation = 0;
+var rotation;
+
+function computeDistance(e){
+    var y = (e.pageY-mouseDownPoint.y);
+    var x = (e.pageX-mouseDownPoint.x);
+    console.log("y: " + y + " x: " + x)
+    return Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
+}
+
+$(document).mousemove(function(e){
+    if(isDown && computeDistance(e) > 20 ){
+//        ctx.restore();
+        var div = 100;
+        var y = (e.pageY-mouseDownPoint.y);
+        mouseCurrentPoint.y = e.pageY;
+        var x = (e.pageX-mouseDownPoint.x);
+        mouseCurrentPoint.x = e.pageX;
+        scale = Math.sqrt( Math.pow(y, 2) + Math.pow(x, 2));
+        scale /= div;
+        if (scale < 1)
+            scale = 1
+        extraRotation = Math.atan2(y, x) * (180.0/Math.PI) * -1;
+        if (extraRotation < 0){
+            extraRotation = (360 + (extraRotation));
+        }
+        rotation = (savedRotation + extraRotation)%360;
+        console.log("Extra: " + extraRotation + "\nBase: " + savedRotation + "\nRotation: " + rotation)
+//        var c=document.getElementById("bigBlueInner");
+//        var ctx=c.getContext("2d");
+//        ctx.rotate(1);
+//        var img=document.getElementById("lenna");
+//        ctx.drawImage(img,0,0);
+//        $("#output").html('<span style="color:#00F;">Scale: '+ scale +' Rotation: '+ rotation +' .</span>');
+    }
+});
+
+$(document).mouseup(function(e) {
+    if(isDown) {
+      isDown = false;
+      savedRotation = rotation;
+    }
+});
+isDown = false;
+
+
+var sun = new Image();
+
+window.onload = function() {
+//    var img=document.getElementById("lenna");
+//    var c=document.getElementById("bigBlueInner");
+//    var ctx=c.getContext("2d");
+//    ctx.save();
+//    ctx.rotate(0.5);
+//    ctx.drawImage(img,0,0);
+};
+
+function getCanvasPoint(e)
+{
+  var tempCanvasPoint =
+      {
+          x: 0,
+          y: 0
+      };
+  if(e.offsetX) {
+      tempCanvasPoint.x = e.offsetX;
+      tempCanvasPoint.y = e.offsetY;
+  }
+  else if(e.layerX) {
+      tempCanvasPoint.x = e.layerX;
+      tempCanvasPoint.y = e.layerY;
+  }
+
+  return tempCanvasPoint;
+}
+
+
+$( document ).mousemove(function( event ) {
+  mouseCurrentCanvasPoint = getCanvasPoint(event)
+});
+
+var sun = new Image();
+var moon = new Image();
+var earth = new Image();
+function init() {
+    sun.src = 'lennaWithGreenDots.jpg';
+    moon.src = 'https://mdn.mozillademos.org/files/1443/Canvas_moon.png';
+    earth.src = 'https://mdn.mozillademos.org/files/1429/Canvas_earth.png';
+    window.requestAnimationFrame(draw);
+}
+
+function draw() {
+    var ctx = document.getElementById('canvas').getContext('2d');
+
+    ctx.globalCompositeOperation = 'destination-over';
+    ctx.clearRect(0, 0, 512, 512); // clear canvas
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.strokeStyle = 'rgba(0, 153, 255, 0.4)';
+
+    var time = new Date();
+
+
+
+    ctx.save();
+
+    if (isDown) {
+        ctx.beginPath();
+        ctx.moveTo(mouseDownCanvasPoint.x, mouseDownCanvasPoint.y);
+        ctx.lineTo(mouseCurrentCanvasPoint.x, mouseCurrentCanvasPoint.y);
+        ctx.stroke();
+    }
+
+
+    ctx.restore();
+
+
+    ctx.save();
+
+    ctx.translate(512/2, 512/2);
+    ctx.scale(Math.sqrt(scale), 1.0/Math.sqrt(scale));
+    ctx.rotate(rotation * Math.PI/180.0 * -1.0)
+    ctx.translate(-512/2, -512/2);
+    ctx.drawImage(sun, 0, 0);
+
+    ctx.restore();
+
+    window.requestAnimationFrame(draw);
+}
+
+init();
+
+</script>
 </html>
