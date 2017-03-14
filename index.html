@@ -73,9 +73,9 @@ $("#bigBlueOuter").mousedown(function(e){
 });
 
 
-var scale;
+var g_scale = 1;
 var savedRotation = 0;
-var rotation;
+var g_rotation = 0;
 
 function computeDistance(e){
     var y = (e.pageY-mouseDownPoint.y);
@@ -92,29 +92,32 @@ $(document).mousemove(function(e){
         mouseCurrentPoint.y = e.pageY;
         var x = (e.pageX-mouseDownPoint.x);
         mouseCurrentPoint.x = e.pageX;
-        scale = Math.sqrt( Math.pow(y, 2) + Math.pow(x, 2));
-        scale /= div;
-        if (scale < 1)
-            scale = 1
+        g_scale = Math.sqrt( Math.pow(y, 2) + Math.pow(x, 2));
+        g_scale /= div;
+        if (g_scale < 1)
+            g_scale = 1
         extraRotation = Math.atan2(y, x) * (180.0/Math.PI) * -1;
         if (extraRotation < 0){
             extraRotation = (360 + (extraRotation));
         }
-        rotation = (savedRotation + extraRotation)%360;
-        console.log("Extra: " + extraRotation + "\nBase: " + savedRotation + "\nRotation: " + rotation)
-//        var c=document.getElementById("bigBlueInner");
-//        var ctx=c.getContext("2d");
-//        ctx.rotate(1);
-//        var img=document.getElementById("lenna");
-//        ctx.drawImage(img,0,0);
-//        $("#output").html('<span style="color:#00F;">Scale: '+ scale +' Rotation: '+ rotation +' .</span>');
+        g_rotation = (savedRotation + extraRotation)%360;
     }
 });
+
+
+var keypoints = [
+    { x: 100, y: 100},
+    { x: 200, y: 100},
+    { x: 200, y: 200},
+    { x: 100, y: 200},
+    { x: 256, y: 256}
+];
+
 
 $(document).mouseup(function(e) {
     if(isDown) {
       isDown = false;
-      savedRotation = rotation;
+      savedRotation = g_rotation;
     }
 });
 isDown = false;
@@ -160,9 +163,125 @@ var moon = new Image();
 var earth = new Image();
 function init() {
     sun.src = 'lennaWithGreenDots.jpg';
-    moon.src = 'https://mdn.mozillademos.org/files/1443/Canvas_moon.png';
-    earth.src = 'https://mdn.mozillademos.org/files/1429/Canvas_earth.png';
     window.requestAnimationFrame(draw);
+}
+
+function multiply(a, b) {
+    var aNumRows = a.length, aNumCols = a[0].length,
+        bNumRows = b.length, bNumCols = b[0].length,
+        m = new Array(aNumRows);  // initialize array of rows
+    for (var r = 0; r < aNumRows; ++r) {
+        m[r] = new Array(bNumCols); // initialize the current row
+        for (var c = 0; c < bNumCols; ++c) {
+            m[r][c] = 0;             // initialize the current cell
+            for (var i = 0; i < aNumCols; ++i) {
+                console.log(a[r][i] + " * " + b[i][c]  + " = " + a[r][i] * b[i][c]);
+                m[r][c] += a[r][i] * b[i][c];
+            }
+        }
+    }
+    return m;
+}
+
+
+function convertToNewKeypoint(keypoint) {
+    return [[keypoint.x], [keypoint.y], [1]];
+}
+
+function convertKeypointsToArrays(keypoints) {
+    var ret = []
+    for (var i = 0; i < keypoints.length; i++){
+        var newKeypoint = convertToNewKeypoint(keypoints[i]);
+        ret.push(newKeypoint);
+    }
+    return ret;
+}
+
+function getScaleMatrix(scaleX, scaleY) {
+    return [[scaleX, 0, 0], [0, scaleY, 0], [0, 0, 1]];
+}
+
+function getRotatoinMatrix(inRotation) {
+    var toRads =  inRotation * Math.PI/180.0
+    return [
+        [Math.cos(toRads), -Math.sin(toRads), 0],
+        [Math.sin(toRads), Math.cos(toRads), 0],
+        [0, 0, 1]
+    ];
+}
+
+function getTransposeMatrix(x, y) {
+    return [
+        [1,0,x],
+        [0,1,y],
+        [0,0,1]
+    ];
+}
+
+function getIdentityMatrix() {
+    return [
+        [1,0,0],
+        [0,1,0],
+        [0,0,1]
+    ];
+}
+
+function getTransformationMatrix(inScale, inRotation, centerPoint) {
+    var transposeMat1  = getTransposeMatrix(-centerPoint.x, -centerPoint.y);
+    var scaleMat = getScaleMatrix(Math.sqrt(inScale), 1.0/Math.sqrt(inScale));
+    var rotationMat = getRotatoinMatrix(-1*inRotation);
+    var transposeMat2  = getTransposeMatrix(centerPoint.x, centerPoint.y);
+    var res = getIdentityMatrix();
+    res = multiply(transposeMat1, res);
+    res = multiply(rotationMat, res);
+    res = multiply(scaleMat, res);
+    res = multiply(transposeMat2, res);
+    return res;
+}
+
+function applyTransformationMatToSingleKeypoint(inKeypoint, transformationMat) {
+    return multiply(transformationMat, inKeypoint);
+}
+
+function applyTransformationMatToAllKeypoints(inKeypoints, transformationMat) {
+    var ret = [];
+    for (var i = 0; i < inKeypoints.length; i++)
+    {
+        var transformedKeypoint = applyTransformationMatToSingleKeypoint(inKeypoints[i], transformationMat);
+        ret.push(transformedKeypoint);
+    }
+    return ret;
+}
+
+function convertArrayToKeypointObjects(finalArrayKeypoints) {
+    var ret = [];
+    for (var i = 0; i < finalArrayKeypoints.length; i++)
+    {
+        var arrayKeypoint = finalArrayKeypoints[i];
+        var tempKeypoint = {
+            x: arrayKeypoint[0],
+            y: arrayKeypoint[1]
+        };
+        ret.push(tempKeypoint)
+    }
+    return ret;
+}
+
+function getNewKeypoints(keypoints, inScale, inRotation, centerPoint) {
+
+    //turn the keypoints into arrays with the extra 1 at the end!!!
+    var newKeypoints = convertKeypointsToArrays(keypoints);
+
+    //now calc the transformation mat
+    var transformationMat = getTransformationMatrix(inScale, inRotation, centerPoint);
+
+    //then mult each keypoint
+    var finalArrayKeypoints = applyTransformationMatToAllKeypoints(newKeypoints, transformationMat);
+
+    //convert back to keypoint objects
+    var finalKeypoints = convertArrayToKeypointObjects(finalArrayKeypoints );
+
+    return finalKeypoints;
 }
 
 function draw() {
@@ -176,8 +295,6 @@ function draw() {
 
     var time = new Date();
 
-
-
     ctx.save();
 
     if (isDown) {
@@ -190,12 +307,24 @@ function draw() {
 
     ctx.restore();
 
+    //now draw the keypoints
+    var newKeypoints = getNewKeypoints(keypoints, g_scale, g_rotation, {x: 512/2, y: 512/2});
+
+    for (var i = 0; i < newKeypoints.length; i++)
+    {
+        var kp = newKeypoints[i];
+        console.log("done");
+        ctx.fillStyle = 'rgba(255, 0, 0, 1.0)';
+        ctx.fillRect(kp.x+2,kp.y+2,4,4);
+        ctx.fillStyle = 'rgba(0, 0, 255, 0.5)';
+        ctx.fillRect(kp.x,kp.y,4,4);
+    }
 
     ctx.save();
 
     ctx.translate(512/2, 512/2);
-    ctx.scale(Math.sqrt(scale), 1.0/Math.sqrt(scale));
-    ctx.rotate(rotation * Math.PI/180.0 * -1.0)
+    ctx.scale(Math.sqrt(g_scale), 1.0/Math.sqrt(g_scale));
+    ctx.rotate(g_rotation * Math.PI/180.0 * -1.0);
     ctx.translate(-512/2, -512/2);
     ctx.drawImage(sun, 0, 0);
 
