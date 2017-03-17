@@ -4,7 +4,7 @@
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
+      <script src="math.js" type="text/javascript"></script>
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
     <style>
@@ -21,7 +21,7 @@
   </head>
   <body>
     <div class="container">
-      <h1>Hello, world! <button onclick="toggleTransposeMode()" >Click me</button> </h1>
+        <h1>Hello, world! </h1><button onclick="toggleTransposeMode()" >Toggle Transpose</button> <button onclick="toggleDrawTrianglesMode()" >Toggle DrawTriangles</button>
         <div id="bigBlueOuter" >
           <canvas id="canvas" width="512" height="512">
           </canvas>
@@ -29,6 +29,8 @@
           </canvas>
           <div id="output"></div>
         </div>
+        <canvas id="canvas2" width="512" height="512">
+        </canvas>
     </div>
     <!-- jQuery first, then Tether, then Bootstrap JS. -->
     <script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n" crossorigin="anonymous"></script>
@@ -73,6 +75,7 @@ $("#bigBlueOuter").mousedown(function(e){
 
 
 var g_isTransposeActive = false;
+var g_shouldDrawTriangles = true;
 var g_scale = 1;
 var g_savedRotation = 0;
 var g_rotation = 0;
@@ -87,6 +90,11 @@ var g_currentTranspose = {
 var g_transpose = {
     x: 0,
     y: 0
+}
+
+function toggleDrawTrianglesMode() {
+    g_shouldDrawTriangles = !g_shouldDrawTriangles;
+    console.log("g_shouldDrawTriangles: " + g_shouldDrawTriangles);
 }
 
 function toggleTransposeMode() {
@@ -138,8 +146,19 @@ $(document).mousemove(function(e){
 var keypoints = [
     { x: 100, y: 100},
     { x: 200, y: 100},
-    { x: 200, y: 200},
     { x: 100, y: 200},
+    { x: 350, y: 212},
+    { x: 354, y: 456},
+    { x: 312, y: 432},
+    { x: 290, y: 401},
+    { x: 350, y: 242},
+    { x: 500, y: 490},
+    { x: 140, y: 495},
+    { x: 490, y: 250},
+    { x: 500, y: 45},
+    { x: 10, y: 490},
+    { x: 143, y: 430},
+    { x: 70, y: 282},
     { x: 256, y: 256}
 ];
 
@@ -306,8 +325,8 @@ function convertArrayToKeypointObjects(finalArrayKeypoints) {
     {
         var arrayKeypoint = finalArrayKeypoints[i];
         var tempKeypoint = {
-            x: arrayKeypoint[0],
-            y: arrayKeypoint[1]
+            x: arrayKeypoint[0][0],
+            y: arrayKeypoint[1][0]
         };
         ret.push(tempKeypoint)
     }
@@ -331,6 +350,116 @@ function getNewKeypoints(keypoints, inScale, inRotation, inTranspose, centerPoin
     return finalKeypoints;
 }
 
+function k_combinations(set, k) {
+    var i, j, combs, head, tailcombs;
+
+    // There is no way to take e.g. sets of 5 elements from
+    // a set of 4.
+    if (k > set.length || k <= 0) {
+        return [];
+    }
+
+    // K-sized set has only one K-sized subset.
+    if (k == set.length) {
+        return [set];
+    }
+
+    // There is N 1-sized subsets in a N-sized set.
+    if (k == 1) {
+        combs = [];
+        for (i = 0; i < set.length; i++) {
+            combs.push([set[i]]);
+        }
+        return combs;
+    }
+
+    // Assert {1 < k < set.length}
+
+    // Algorithm description:
+    // To get k-combinations of a set, we want to join each element
+    // with all (k-1)-combinations of the other elements. The set of
+    // these k-sized sets would be the desired result. However, as we
+    // represent sets with lists, we need to take duplicates into
+    // account. To avoid producing duplicates and also unnecessary
+    // computing, we use the following approach: each element i
+    // divides the list into three: the preceding elements, the
+    // current element i, and the subsequent elements. For the first
+    // element, the list of preceding elements is empty. For element i,
+    // we compute the (k-1)-computations of the subsequent elements,
+    // join each with the element i, and store the joined to the set of
+    // computed k-combinations. We do not need to take the preceding
+    // elements into account, because they have already been the i:th
+    // element so they are already computed and stored. When the length
+    // of the subsequent list drops below (k-1), we cannot find any
+    // (k-1)-combs, hence the upper limit for the iteration:
+    combs = [];
+    for (i = 0; i < set.length - k + 1; i++) {
+        // head is a list that includes only our current element.
+        head = set.slice(i, i + 1);
+        // We take smaller combinations from the subsequent elements
+        tailcombs = k_combinations(set.slice(i + 1), k - 1);
+        // For each (k-1)-combination we join it with the current
+        // and store it to the set of k-combinations.
+        for (j = 0; j < tailcombs.length; j++) {
+            combs.push(head.concat(tailcombs[j]));
+        }
+    }
+    return combs;
+}
+
+function getTheTriangles(newKeypoints) {
+    return k_combinations(newKeypoints, 3);
+}
+
+function drawTriangle(ctx, tri) {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+    ctx.strokeStyle = 'rgba(0, 153, 255, .9)';
+    ctx.beginPath();
+    ctx.moveTo(tri[0].x, tri[0].y);
+    ctx.lineTo(tri[1].x, tri[1].y);
+    ctx.lineTo(tri[2].x, tri[2].y);
+    ctx.lineTo(tri[0].x, tri[0].y);
+    ctx.stroke();
+}
+
+function filterBasedOnVisible(keypoints, boundingBox) {
+    var ret = [];
+    for (var i = 0; i < keypoints.length; i++) {
+        var keypoint = keypoints[i];
+        if( keypoint.x >= boundingBox.x
+            || keypoint.x < 0
+            || keypoint.y >= boundingBox.y
+            || keypoint.y < 0)
+        {
+            //ignore this keypoint
+        } else {
+            ret.push(keypoint)
+        }
+    }
+    return ret;
+}
+
+
+function applyTransformationMatToTriangle(tri, convertToOriginalImageMat) {
+    var ret = [];
+    for (var i = 0; i < tri.length; i++) {
+        var kp = tri[i];
+        kp = convertToNewKeypoint(kp);
+        var newKp = applyTransformationMatToSingleKeypoint(kp, convertToOriginalImageMat);
+        var newKp = {
+            x: newKp[0][0],
+            y: newKp[1][0]
+        };
+        ret.push(newKp);
+    }
+    return ret;
+}
+function drawTriangleWithTransformationMatrix(ctx2, tri, convertToOriginalImageMat) {
+
+    var newTri = applyTransformationMatToTriangle(tri, convertToOriginalImageMat);
+    drawTriangle(ctx2, newTri);
+}
+
 function draw() {
 
     g_transpose = {
@@ -339,7 +468,8 @@ function draw() {
     };
 
     var ctx = document.getElementById('canvas').getContext('2d');
-
+    var ctx2 = document.getElementById('canvas2').getContext('2d');
+    ctx2.drawImage(sun, 0, 0);
     ctx.globalCompositeOperation = 'destination-over';
     ctx.clearRect(0, 0, 512, 512); // clear canvas
 
@@ -351,10 +481,10 @@ function draw() {
     ctx.save();
 
     if (isDown) {
-        ctx.beginPath();
-        ctx.moveTo(mouseDownCanvasPoint.x, mouseDownCanvasPoint.y);
-        ctx.lineTo(mouseCurrentCanvasPoint.x, mouseCurrentCanvasPoint.y);
-        ctx.stroke();
+//        ctx.beginPath();
+//        ctx.moveTo(mouseDownCanvasPoint.x, mouseDownCanvasPoint.y);
+//        ctx.lineTo(mouseCurrentCanvasPoint.x, mouseCurrentCanvasPoint.y);
+//        ctx.stroke();
     }
 
     ctx.restore();
@@ -362,13 +492,29 @@ function draw() {
     //now draw the keypoints
     var newKeypoints = getNewKeypoints(keypoints, g_scale, g_rotation, g_transpose, {x: 0, y: 0}, {x: 512, y: 512});
 
-    for (var i = 0; i < newKeypoints.length; i++)
-    {
-        var kp = newKeypoints[i];
-        ctx.fillStyle = 'rgba(255, 0, 0, 1.0)';
-        ctx.fillRect(kp.x+2,kp.y+2,4,4);
-        ctx.fillStyle = 'rgba(0, 0, 255, 0.5)';
-        ctx.fillRect(kp.x,kp.y,4,4);
+
+    if(g_shouldDrawTriangles){
+        var filteredKeypoints = filterBasedOnVisible(newKeypoints, {x: 512, y: 512});//input is canvas/imageCutout size
+        var triangles = getTheTriangles(filteredKeypoints);
+
+        for (var i = 0; i < triangles.length; i++) {
+            var tri = triangles[i];
+            drawTriangle(ctx, tri);
+            var transMat = getTransformationMatrix(g_scale, g_rotation, g_transpose, {x: 0, y: 0}, {x: 512, y: 512});
+            var convertToOriginalImageMat = math.inv(transMat);
+            drawTriangleWithTransformationMatrix(ctx2, tri, convertToOriginalImageMat);
+            //do the translation map
+            //draw the next triangle
+        }
+
+        for (var i = 0; i < filteredKeypoints.length; i++)
+        {
+            var kp = filteredKeypoints[i];
+            ctx.fillStyle = 'rgba(255, 0, 0, 1.0)';
+            ctx.fillRect(kp.x+2,kp.y+2,4,4);
+            ctx.fillStyle = 'rgba(0, 0, 255, 0.5)';
+            ctx.fillRect(kp.x,kp.y,4,4);
+        }
     }
 
     ctx.save();
@@ -378,6 +524,17 @@ function draw() {
     ctx.rotate(g_rotation * Math.PI/180.0 * -1.0);
 //    ctx.translate(sun.width/2, sun.width/2);
     ctx.drawImage(sun, -sun.width/2, -sun.height/2);
+
+
+    for (var i = 0; i < keypoints.length; i++)
+    {
+        var kp = keypoints[i];
+        ctx2.fillStyle = 'rgba(255, 0, 0, 1.0)';
+        ctx2.fillRect(kp.x+2,kp.y+2,4,4);
+        ctx2.fillStyle = 'rgba(0, 0, 255, 0.5)';
+        ctx2.fillRect(kp.x,kp.y,4,4);
+    }
+
 
     ctx.restore();
 
