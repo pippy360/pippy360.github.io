@@ -23,14 +23,12 @@
     <div class="container">
         <h1>Hello, world! </h1><button onclick="toggleTransposeMode()" >Toggle Transpose</button> <button onclick="toggleDrawTrianglesMode()" >Toggle DrawTriangles</button>
         <div id="bigBlueOuter" >
-          <canvas id="canvas" width="512" height="512">
-          </canvas>
-          <canvas id="bigBlueInner" width="512" height="512">
-          </canvas>
-          <div id="output"></div>
+            <canvas id="canvas" width="512" height="512"></canvas>
+            <canvas id="canvas2" width="512" height="512"></canvas>
         </div>
-        <canvas id="canvas2" width="512" height="512">
-        </canvas>
+        <div id="output">
+            <span id="number_of_triangles_output"></span>
+        </div>
     </div>
     <!-- jQuery first, then Tether, then Bootstrap JS. -->
     <script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n" crossorigin="anonymous"></script>
@@ -74,7 +72,14 @@ $("#bigBlueOuter").mousedown(function(e){
 });
 
 
-var g_isTransposeActive = false;
+//SOURCE: GLOBALS g_global
+var g_showRedTriangles = false;//show the invalid triangles (red) on the original image
+var g_numberOfKeypointsToGenerate = 40;
+var g_maxPntDist = 300;
+var g_minPntDist = 150;
+var g_minTriArea = 100;//11000;
+var g_maxTriArea = 21000;
+var g_isTransposeActive = true;
 var g_shouldDrawTriangles = true;
 var g_scale = 1;
 var g_savedRotation = 0;
@@ -143,7 +148,7 @@ $(document).mousemove(function(e){
 });
 
 
-var keypoints = [
+var g_keypoints = [
     { x: 100, y: 100},
     { x: 200, y: 100},
     { x: 100, y: 200},
@@ -185,6 +190,8 @@ isDown = false;
 
 
 var sun = new Image();
+var g_genKeypoints = [];
+
 
 window.onload = function() {
 //    var img=document.getElementById("lenna");
@@ -194,7 +201,15 @@ window.onload = function() {
 //    ctx.rotate(0.5);
 //    ctx.drawImage(img,0,0);
     g_savedTranspose= {x: 512/2, y: 512/2};
+    g_genKeypoints = generateRandomKeypoints({x: 512, y: 512}, g_numberOfKeypointsToGenerate);
 };
+
+function getDistance(point1, point2) {
+    var a = point1.x - point2.x;
+    var b = point1.y - point2.y;
+
+    return Math.sqrt( a*a + b*b );
+}
 
 function getCanvasPoint(e)
 {
@@ -251,7 +266,7 @@ function convertToNewKeypoint(keypoint) {
 }
 
 function convertKeypointsToArrays(keypoints) {
-    var ret = []
+    var ret = [];
     for (var i = 0; i < keypoints.length; i++){
         var newKeypoint = convertToNewKeypoint(keypoints[i]);
         ret.push(newKeypoint);
@@ -264,7 +279,7 @@ function getScaleMatrix(scaleX, scaleY) {
 }
 
 function getRotatoinMatrix(inRotation) {
-    var toRads =  inRotation * Math.PI/180.0
+    var toRads =  inRotation * Math.PI/180.0;
     return [
         [Math.cos(toRads), -Math.sin(toRads), 0],
         [Math.sin(toRads), Math.cos(toRads), 0],
@@ -350,6 +365,59 @@ function getNewKeypoints(keypoints, inScale, inRotation, inTranspose, centerPoin
     return finalKeypoints;
 }
 
+function getArea(tri){
+    var a = tri[0];
+    var b = tri[1];
+    var c = tri[2];
+    var one = (a.x-c.x)*(b.y-a.y);
+    var two = (a.x-b.x)*(c.y-a.y);
+    var area = Math.abs(one-two)*0.5;
+    return area;
+};
+
+function checkIfPointsAreClose(tempTri) {
+    var pt1 = tempTri[0];
+    var pt2 = tempTri[1];
+    var pt3 = tempTri[2];
+
+    return getDistance(pt1, pt2) < g_maxPntDist
+        && getDistance(pt1, pt3) < g_maxPntDist
+        && getDistance(pt1, pt2) > g_minPntDist
+        && getDistance(pt1, pt3) > g_minPntDist;
+}
+
+function isValidTriangle(tempTri) {
+    return getArea(tempTri) > g_minTriArea && getArea(tempTri) < g_maxTriArea && checkIfPointsAreClose(tempTri);
+}
+
+function filterValidPoints(headPoint, tailcombs) {
+    var ret = [];
+
+    for (var i = 0; i < tailcombs.length; i++) {
+        var currPt = tailcombs[i];
+        if (getDistance(currPt, headPoint) < g_maxPntDist && getDistance(currPt, headPoint) > g_minPntDist){
+            ret.push([currPt]);
+        }
+    }
+    return ret;
+}
+
+function filtered_k_combinations(inKeypoints) {
+    var ret = [];
+    for (var i = 0; i < inKeypoints.length - 2; i++) {
+        var keypoint = inKeypoints[i];
+        var tail = inKeypoints.slice(i + 1);
+        var subsetOfValidPoints = filterValidPoints(keypoint, tail);
+        var combs = k_combinations(subsetOfValidPoints, 2);
+        for (var j = 0; j < combs.length; j++) {
+            var currComb = combs[j];
+            var tempTriangle = [keypoint, currComb[0][0], currComb[1][0]];
+            ret.push(tempTriangle);
+        }
+    }
+    return ret;
+}
+
 function k_combinations(set, k) {
     var i, j, combs, head, tailcombs;
 
@@ -406,20 +474,23 @@ function k_combinations(set, k) {
     }
     return combs;
 }
-
 function getTheTriangles(newKeypoints) {
-    return k_combinations(newKeypoints, 3);
+    return filtered_k_combinations(newKeypoints);
 }
 
-function drawTriangle(ctx, tri) {
+function drawTriangleWithColour(ctx, tri, colour) {
+    ctx.strokeStyle = 'rgba('+ colour[0] +', '+ colour[1] +' ,'+ colour[2] +', .9)';
     ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
-    ctx.strokeStyle = 'rgba(0, 153, 255, .9)';
     ctx.beginPath();
     ctx.moveTo(tri[0].x, tri[0].y);
     ctx.lineTo(tri[1].x, tri[1].y);
     ctx.lineTo(tri[2].x, tri[2].y);
     ctx.lineTo(tri[0].x, tri[0].y);
     ctx.stroke();
+}
+
+function drawTriangle(ctx, tri) {
+    drawTriangleWithColour(ctx, tri, [0, 153, 255])
 }
 
 function filterBasedOnVisible(keypoints, boundingBox) {
@@ -454,10 +525,41 @@ function applyTransformationMatToTriangle(tri, convertToOriginalImageMat) {
     }
     return ret;
 }
+function isValidTriangle_DrawingTest(newTri) {
+    return getDistance(newTri[0], newTri[1]) < g_maxPntDist
+        && getDistance(newTri[0], newTri[1]) < g_maxPntDist
+        && getDistance(newTri[0], newTri[2]) > g_minPntDist
+        && getDistance(newTri[0], newTri[2]) > g_minPntDist
+        ;
+}
+
 function drawTriangleWithTransformationMatrix(ctx2, tri, convertToOriginalImageMat) {
 
     var newTri = applyTransformationMatToTriangle(tri, convertToOriginalImageMat);
-    drawTriangle(ctx2, newTri);
+    if(isValidTriangle_DrawingTest(newTri)){
+        drawTriangle(ctx2, newTri);
+    } else {
+        if(g_showRedTriangles){
+            drawTriangleWithColour(ctx2, newTri, [255,0,0]);
+        }
+    }
+}
+
+
+function generateRandomKeypoints(imageSize, numberOfKeypoints) {
+
+    var ret = [];
+    for (var i = 0; i < numberOfKeypoints; i++) {
+
+        var x = Math.floor((Math.random() * imageSize.x));
+        var y = Math.floor((Math.random() * imageSize.y));
+        var kp = {
+            x: x,
+            y: y
+        };
+        ret.push(kp)
+    }
+    return ret;
 }
 
 function draw() {
@@ -490,13 +592,13 @@ function draw() {
     ctx.restore();
 
     //now draw the keypoints
-    var newKeypoints = getNewKeypoints(keypoints, g_scale, g_rotation, g_transpose, {x: 0, y: 0}, {x: 512, y: 512});
+    var newKeypoints = getNewKeypoints(g_genKeypoints, g_scale, g_rotation, g_transpose, {x: 0, y: 0}, {x: 512, y: 512});
 
 
     if(g_shouldDrawTriangles){
         var filteredKeypoints = filterBasedOnVisible(newKeypoints, {x: 512, y: 512});//input is canvas/imageCutout size
         var triangles = getTheTriangles(filteredKeypoints);
-
+        $("#number_of_triangles_output").html("Number of triangles: " + triangles.length);
         for (var i = 0; i < triangles.length; i++) {
             var tri = triangles[i];
             drawTriangle(ctx, tri);
@@ -510,10 +612,10 @@ function draw() {
         for (var i = 0; i < filteredKeypoints.length; i++)
         {
             var kp = filteredKeypoints[i];
-            ctx.fillStyle = 'rgba(255, 0, 0, 1.0)';
-            ctx.fillRect(kp.x+2,kp.y+2,4,4);
-            ctx.fillStyle = 'rgba(0, 0, 255, 0.5)';
-            ctx.fillRect(kp.x,kp.y,4,4);
+//            ctx.fillStyle = 'rgba(255, 0, 0, 1.0)';
+//            ctx.fillRect(kp.x+2,kp.y+2,4,4);
+//            ctx.fillStyle = 'rgba(0, 0, 255, 0.5)';
+//            ctx.fillRect(kp.x,kp.y,4,4);
         }
     }
 
@@ -526,13 +628,13 @@ function draw() {
     ctx.drawImage(sun, -sun.width/2, -sun.height/2);
 
 
-    for (var i = 0; i < keypoints.length; i++)
+    for (var i = 0; i < g_genKeypoints.length; i++)
     {
-        var kp = keypoints[i];
-        ctx2.fillStyle = 'rgba(255, 0, 0, 1.0)';
-        ctx2.fillRect(kp.x+2,kp.y+2,4,4);
-        ctx2.fillStyle = 'rgba(0, 0, 255, 0.5)';
-        ctx2.fillRect(kp.x,kp.y,4,4);
+        var kp = g_genKeypoints[i];
+//        ctx2.fillStyle = 'rgba(255, 0, 0, 1.0)';
+//        ctx2.fillRect(kp.x+2,kp.y+2,4,4);
+//        ctx2.fillStyle = 'rgba(0, 0, 255, 0.5)';
+//        ctx2.fillRect(kp.x,kp.y,4,4);
     }
 
 
