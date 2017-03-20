@@ -17,11 +17,26 @@
             -ms-user-select: none;
             user-select: none;
         }
+        .move { cursor: move; }
+        #lineSvgTag {
+            pointer-events:none;
+        }
     </style>
   </head>
   <body>
     <div class="container">
-        <h1>Hello, world! </h1><button onclick="toggleTransposeMode()" >Toggle Transpose</button> <button onclick="toggleDrawTrianglesMode()" >Toggle DrawTriangles</button>
+        <div>
+            <h1>Demo</h1>
+            <p>
+                <button id="transposeButton" class="btn btn-default active" onclick="changeCurrnetOperation(TransformationOperation.TRANSPOSE)" >Move</button>
+                <button class="btn btn-default" onclick="changeCurrnetOperation(TransformationOperation.SCALE)" >Scale</button>
+                <button class="btn btn-default" onclick="changeCurrnetOperation(TransformationOperation.ROTATE)" >Rotate</button>
+                <button class="btn btn-default" onclick="toggleDrawTrianglesMode()" >Toggle DrawTriangles</button>
+            </p>
+            <p>
+                Click and drag on the first image to apply a transformation.
+            </p>
+        </div>
         <div id="bigBlueOuter" >
             <canvas id="canvas" width="512" height="512"></canvas>
             <canvas id="canvas2" width="512" height="512"></canvas>
@@ -30,6 +45,9 @@
             <span id="number_of_triangles_output"></span>
         </div>
     </div>
+    <svg id="lineSvgTag" style="display: inline;position: absolute; min-height: 4px;min-width: 4px;" >
+        <line id="line" x1="0" y1="0" x2="0" y2="0" style="stroke:rgb(255,0,0);stroke-width:2" />
+    </svg>
     <!-- jQuery first, then Tether, then Bootstrap JS. -->
     <script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script>
@@ -64,24 +82,38 @@ var mouseCurrentCanvasPoint =
 };
 
 $("#bigBlueOuter").mousedown(function(e){
+
+    var y = (e.pageY - mouseDownPoint.y);
+    mouseCurrentPoint.y = e.pageY;
+    var x = (e.pageX - mouseDownPoint.x);
+    mouseCurrentPoint.x = e.pageX;
+
     isDown = true;
     e.preventDefault();
     mouseDownPoint.x = e.pageX;
     mouseDownPoint.y = e.pageY;
     mouseDownCanvasPoint = getCanvasPoint(e);
+
 });
 
 
+var TransformationOperation = {
+    TRANSPOSE: 1,
+    SCALE: 2,
+    ROTATE: 3
+};
+
 //SOURCE: GLOBALS g_global
+var g_currentTranformationOperationState = TransformationOperation.TRANSPOSE;
 var g_showRedTriangles = false;//show the invalid triangles (red) on the original image
-var g_numberOfKeypointsToGenerate = 40;
+var g_numberOfKeypointsToGenerate = 20;
 var g_maxPntDist = 300;
 var g_minPntDist = 150;
 var g_minTriArea = 100;//11000;
 var g_maxTriArea = 21000;
-var g_isTransposeActive = true;
 var g_shouldDrawTriangles = true;
 var g_scale = 1;
+var g_scaleDirection = 0;
 var g_savedRotation = 0;
 var g_rotation = 0;
 var g_savedTranspose = {
@@ -102,12 +134,6 @@ function toggleDrawTrianglesMode() {
     console.log("g_shouldDrawTriangles: " + g_shouldDrawTriangles);
 }
 
-function toggleTransposeMode() {
-    g_isTransposeActive = !g_isTransposeActive;
-    console.log("g_isTransposeActive: " + g_isTransposeActive);
-}
-
-
 function computeDistance(e){
     var y = (e.pageY-mouseDownPoint.y);
     var x = (e.pageX-mouseDownPoint.x);
@@ -115,30 +141,47 @@ function computeDistance(e){
     return Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
 }
 
+function changeCurrnetOperation(newState) {
+    g_currentTranformationOperationState = newState;
+    if (g_currentTranformationOperationState == TransformationOperation.TRANSPOSE) {
+        $( "#canvas" ).addClass( "move" );
+    } else {
+        $( "#canvas" ).removeClass( "move" );
+    }
+}
+
 $(document).mousemove(function(e){
     if (isDown && computeDistance(e) > 20 ) {
-      if (!g_isTransposeActive) {
-        //        ctx.restore();
-        var div = 100;
         var y = (e.pageY - mouseDownPoint.y);
         mouseCurrentPoint.y = e.pageY;
         var x = (e.pageX - mouseDownPoint.x);
         mouseCurrentPoint.x = e.pageX;
-        g_scale = Math.sqrt(Math.pow(y, 2) + Math.pow(x, 2));
-        g_scale /= div;
-        if (g_scale < 1)
-            g_scale = 1
-        extraRotation = Math.atan2(y, x) * (180.0 / Math.PI) * -1;
-        if (extraRotation < 0) {
-            extraRotation = (360 + (extraRotation));
-        }
-        g_rotation = (g_savedRotation + extraRotation) % 360;
-      }else if(g_isTransposeActive) {
-          var div = 100;
-          var y = (e.pageY - mouseDownPoint.y);
-          mouseCurrentPoint.y = e.pageY;
-          var x = (e.pageX - mouseDownPoint.x);
-          mouseCurrentPoint.x = e.pageX;
+
+      if (g_currentTranformationOperationState == TransformationOperation.ROTATE) {
+          //        ctx.restore();
+
+          var extraRotation = Math.atan2(y, x) * (180.0 / Math.PI) * -1;
+          if (extraRotation < 0) {
+              extraRotation = (360 + (extraRotation));
+          }
+          g_rotation = (g_savedRotation + extraRotation) % 360;
+      }else if(g_currentTranformationOperationState == TransformationOperation.SCALE){
+            var div = 100;
+          var direction = Math.atan2(y, x) * (180.0 / Math.PI) * -1;
+          if (direction < 0) {
+              direction = (360 + (direction));
+          }
+          g_scaleDirection = direction;
+
+          g_scale = Math.sqrt(Math.pow(y, 2) + Math.pow(x, 2));
+          g_scale /= div;
+          if (g_scale < 1){
+              g_scale = 1
+          }
+          console.log("g_scale: " + extraRotation);
+
+      }else if(g_currentTranformationOperationState == TransformationOperation.TRANSPOSE) {
+
           g_currentTranspose = {
               x: x,
               y: y
@@ -172,9 +215,11 @@ $(document).mouseup(function(e) {
     if(isDown) {
         isDown = false;
 
-        if(!g_isTransposeActive){
+        $("#lineSvgTag").css("display", "none");
+
+        if(g_currentTranformationOperationState == TransformationOperation.ROTATE){
             g_savedRotation = g_rotation;
-        }else if(g_isTransposeActive) {
+        }else if(g_currentTranformationOperationState == TransformationOperation.TRANSPOSE) {
             g_savedTranspose = {
                 x: g_savedTranspose.x + g_currentTranspose.x,
                 y: g_savedTranspose.y + g_currentTranspose.y
@@ -193,6 +238,13 @@ var sun = new Image();
 var g_genKeypoints = [];
 
 
+function setDefaultParameters() {
+    g_currentTranformationOperationState = TransformationOperation.TRANSPOSE;
+    g_savedTranspose= {x: 512/2, y: 512/2};
+    g_genKeypoints = generateRandomKeypoints({x: 512, y: 512}, g_numberOfKeypointsToGenerate);
+    changeCurrnetOperation(TransformationOperation.TRANSPOSE);
+}
+
 window.onload = function() {
 //    var img=document.getElementById("lenna");
 //    var c=document.getElementById("bigBlueInner");
@@ -200,8 +252,7 @@ window.onload = function() {
 //    ctx.save();
 //    ctx.rotate(0.5);
 //    ctx.drawImage(img,0,0);
-    g_savedTranspose= {x: 512/2, y: 512/2};
-    g_genKeypoints = generateRandomKeypoints({x: 512, y: 512}, g_numberOfKeypointsToGenerate);
+    setDefaultParameters();
 };
 
 function getDistance(point1, point2) {
@@ -303,7 +354,7 @@ function getIdentityMatrix() {
     ];
 }
 
-function getTransformationMatrix(inScale, inRotation, inTranspose, centerPointOfRotation, imageSize) {
+function getTransformationMatrix(inScale, inRotation, inTranspose, inScaleDirection, centerPointOfRotation, imageSize) {
     var centerKeypointsAroundImageCenterMat  = getTransposeMatrix(-imageSize.x/2, -imageSize.y/2);
     var transposeMat1  = getTransposeMatrix(-centerPointOfRotation.x, -centerPointOfRotation.y);
     var scaleMat = getScaleMatrix(Math.sqrt(inScale), 1.0/Math.sqrt(inScale));
@@ -311,11 +362,18 @@ function getTransformationMatrix(inScale, inRotation, inTranspose, centerPointOf
     var transposeMat2  = getTransposeMatrix(centerPointOfRotation.x, centerPointOfRotation.y);
     var imageTranspose = getTransposeMatrix(inTranspose.x, inTranspose.y);
     var res = getIdentityMatrix();
+    var scaleRotationMat1 = getRotatoinMatrix(inScaleDirection);
+    var scaleRotationMat2 = getRotatoinMatrix(-1*inScaleDirection);
+
     res = multiply(centerKeypointsAroundImageCenterMat, res);
     res = multiply(transposeMat1, res);
-    res = multiply(rotationMat, res);
+    res = multiply(scaleRotationMat1, res);
+
     res = multiply(scaleMat, res);
+    res = multiply(scaleRotationMat2, res);
     res = multiply(transposeMat2, res);
+
+    res = multiply(rotationMat, res);
     res = multiply(imageTranspose, res);
     return res;
 }
@@ -348,13 +406,13 @@ function convertArrayToKeypointObjects(finalArrayKeypoints) {
     return ret;
 }
 
-function getNewKeypoints(keypoints, inScale, inRotation, inTranspose, centerPointOfRotation, imageSize) {
+function getNewKeypoints(keypoints, inScale, inRotation, inScaleDirection, inTranspose, centerPointOfRotation, imageSize) {
 
     //turn the keypoints into arrays with the extra 1 at the end!!!
     var newKeypoints = convertKeypointsToArrays(keypoints);
 
     //now calc the transformation mat
-    var transformationMat = getTransformationMatrix(inScale, inRotation, inTranspose, centerPointOfRotation, imageSize);
+    var transformationMat = getTransformationMatrix(inScale, inRotation, inTranspose, inScaleDirection, centerPointOfRotation, imageSize);
 
     //then mult each keypoint
     var finalArrayKeypoints = applyTransformationMatToAllKeypoints(newKeypoints, transformationMat);
@@ -562,6 +620,33 @@ function generateRandomKeypoints(imageSize, numberOfKeypoints) {
     return ret;
 }
 
+function drawLine(inMouseDownPoint, inMouseCurrentPoint) {
+    $("#lineSvgTag").css("display", "inline");
+
+    var startx = Math.min(inMouseDownPoint.x, inMouseCurrentPoint.x);
+    var starty = Math.min(inMouseDownPoint.y, inMouseCurrentPoint.y);
+    var endx = Math.max(inMouseDownPoint.x, inMouseCurrentPoint.x);
+    var endy = Math.max(inMouseDownPoint.y, inMouseCurrentPoint.y);
+
+    $( "#lineSvgTag" ).css('left', startx + 'px');
+    $( "#lineSvgTag" ).css('top', starty + 'px');
+
+    var x1 = inMouseDownPoint.x - startx;
+    var y1 = inMouseDownPoint.y - starty;
+    $( "#line" ).attr('x1', x1);
+    $( "#line" ).attr('y1', y1);
+
+    var x2 = inMouseCurrentPoint.x - inMouseDownPoint.x;
+    var y2 = inMouseCurrentPoint.y - inMouseDownPoint.y;
+    $( "#line" ).attr('x2', x2 + x1);
+    $( "#line" ).attr('y2', y2 + y1);
+
+    $( "#lineSvgTag" ).css('width', endx - startx);
+    $( "#lineSvgTag" ).css('height', endy - starty);
+
+}
+
+
 function draw() {
 
     g_transpose = {
@@ -587,12 +672,14 @@ function draw() {
 //        ctx.moveTo(mouseDownCanvasPoint.x, mouseDownCanvasPoint.y);
 //        ctx.lineTo(mouseCurrentCanvasPoint.x, mouseCurrentCanvasPoint.y);
 //        ctx.stroke();
+
+        drawLine(mouseDownPoint, mouseCurrentPoint);
     }
 
     ctx.restore();
 
     //now draw the keypoints
-    var newKeypoints = getNewKeypoints(g_genKeypoints, g_scale, g_rotation, g_transpose, {x: 0, y: 0}, {x: 512, y: 512});
+    var newKeypoints = getNewKeypoints(g_genKeypoints, g_scale, g_rotation, g_scaleDirection, g_transpose, {x: 0, y: 0}, {x: 512, y: 512});
 
 
     if(g_shouldDrawTriangles){
@@ -601,10 +688,10 @@ function draw() {
         $("#number_of_triangles_output").html("Number of triangles: " + triangles.length);
         for (var i = 0; i < triangles.length; i++) {
             var tri = triangles[i];
-            drawTriangle(ctx, tri);
-            var transMat = getTransformationMatrix(g_scale, g_rotation, g_transpose, {x: 0, y: 0}, {x: 512, y: 512});
+            var transMat = getTransformationMatrix(g_scale, g_rotation, g_transpose, g_scaleDirection, {x: 0, y: 0}, {x: 512, y: 512});
             var convertToOriginalImageMat = math.inv(transMat);
             drawTriangleWithTransformationMatrix(ctx2, tri, convertToOriginalImageMat);
+            drawTriangle(ctx, tri);
             //do the translation map
             //draw the next triangle
         }
@@ -622,8 +709,10 @@ function draw() {
     ctx.save();
 
     ctx.translate(g_transpose.x, g_transpose.y);
-    ctx.scale(Math.sqrt(g_scale), 1.0/Math.sqrt(g_scale));
     ctx.rotate(g_rotation * Math.PI/180.0 * -1.0);
+    ctx.rotate(g_scaleDirection * Math.PI/180.0 * -1.0);
+    ctx.scale(Math.sqrt(g_scale), 1.0/Math.sqrt(g_scale));
+    ctx.rotate(g_scaleDirection * Math.PI/180.0);
 //    ctx.translate(sun.width/2, sun.width/2);
     ctx.drawImage(sun, -sun.width/2, -sun.height/2);
 
