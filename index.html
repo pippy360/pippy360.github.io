@@ -5,6 +5,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
       <script src="math.js" type="text/javascript"></script>
+      <script src="http://d3js.org/d3.v3.min.js"></script>
+      <script src="cropping.js" type="text/javascript"></script>
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
     <style>
@@ -31,6 +33,7 @@
                 <button id="transposeButton" class="btn btn-default active" onclick="changeCurrnetOperation(TransformationOperation.TRANSPOSE)" >Move</button>
                 <button class="btn btn-default" onclick="changeCurrnetOperation(TransformationOperation.SCALE)" >Scale</button>
                 <button class="btn btn-default" onclick="changeCurrnetOperation(TransformationOperation.ROTATE)" >Rotate</button>
+                <button class="btn btn-default" onclick="changeCurrnetOperation(TransformationOperation.CROP)" >Crop</button>
                 <button class="btn btn-default" onclick="toggleDrawTrianglesMode()" >Toggle DrawTriangles</button>
             </p>
             <p>
@@ -81,26 +84,14 @@ var mouseCurrentCanvasPoint =
     y: 0
 };
 
-$("#bigBlueOuter").mousedown(function(e){
 
-    var y = (e.pageY - mouseDownPoint.y);
-    mouseCurrentPoint.y = e.pageY;
-    var x = (e.pageX - mouseDownPoint.x);
-    mouseCurrentPoint.x = e.pageX;
-
-    isDown = true;
-    e.preventDefault();
-    mouseDownPoint.x = e.pageX;
-    mouseDownPoint.y = e.pageY;
-    mouseDownCanvasPoint = getCanvasPoint(e);
-
-});
 
 
 var TransformationOperation = {
     TRANSPOSE: 1,
     SCALE: 2,
-    ROTATE: 3
+    ROTATE: 3,
+    CROP: 4
 };
 
 //SOURCE: GLOBALS g_global
@@ -116,6 +107,9 @@ var g_scale = 1;
 var g_scaleDirection = 0;
 var g_savedRotation = 0;
 var g_rotation = 0;
+var g_genKeypoints = [];
+var g_coords = [];
+
 var g_savedTranspose = {
     x: 0,
     y: 0
@@ -150,7 +144,27 @@ function changeCurrnetOperation(newState) {
     }
 }
 
+$("#bigBlueOuter").mousedown(function(e){
+
+    var y = (e.pageY - mouseDownPoint.y);
+    mouseCurrentPoint.y = e.pageY;
+    var x = (e.pageX - mouseDownPoint.x);
+    mouseCurrentPoint.x = e.pageX;
+
+    isDown = true;
+    e.preventDefault();
+    mouseDownPoint.x = e.pageX;
+    mouseDownPoint.y = e.pageY;
+    mouseDownCanvasPoint = getCanvasPoint(e);
+
+    if (g_currentTranformationOperationState == TransformationOperation.CROP) {
+        g_coords = [];
+    }
+
+});
+
 $(document).mousemove(function(e){
+    mouseCurrentCanvasPoint = getCanvasPoint(event);
     if (isDown && computeDistance(e) > 20 ) {
         var y = (e.pageY - mouseDownPoint.y);
         mouseCurrentPoint.y = e.pageY;
@@ -186,30 +200,11 @@ $(document).mousemove(function(e){
               x: x,
               y: y
           };
+      }else if(g_currentTranformationOperationState == TransformationOperation.CROP) {
+          g_coords.push([mouseCurrentCanvasPoint.x, mouseCurrentCanvasPoint.y]);
       }
     }
 });
-
-
-var g_keypoints = [
-    { x: 100, y: 100},
-    { x: 200, y: 100},
-    { x: 100, y: 200},
-    { x: 350, y: 212},
-    { x: 354, y: 456},
-    { x: 312, y: 432},
-    { x: 290, y: 401},
-    { x: 350, y: 242},
-    { x: 500, y: 490},
-    { x: 140, y: 495},
-    { x: 490, y: 250},
-    { x: 500, y: 45},
-    { x: 10, y: 490},
-    { x: 143, y: 430},
-    { x: 70, y: 282},
-    { x: 256, y: 256}
-];
-
 
 $(document).mouseup(function(e) {
     if(isDown) {
@@ -228,15 +223,12 @@ $(document).mouseup(function(e) {
                 x: 0,
                 y: 0
             };
+        }else if(g_currentTranformationOperationState == TransformationOperation.CROP) {
+
         }
     }
 });
 isDown = false;
-
-
-var sun = new Image();
-var g_genKeypoints = [];
-
 
 function setDefaultParameters() {
     g_currentTranformationOperationState = TransformationOperation.TRANSPOSE;
@@ -246,14 +238,63 @@ function setDefaultParameters() {
 }
 
 window.onload = function() {
-//    var img=document.getElementById("lenna");
-//    var c=document.getElementById("bigBlueInner");
-//    var ctx=c.getContext("2d");
-//    ctx.save();
-//    ctx.rotate(0.5);
-//    ctx.drawImage(img,0,0);
     setDefaultParameters();
 };
+
+
+function drawClosingPolygon(ctx, inPoints) {
+
+    var previousPoint = inPoints[inPoints.length-1];
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+    ctx.beginPath();
+
+    for (var i = 0; i < inPoints.length; i++) {
+        var currentPoint = inPoints[i];
+
+        ctx.moveTo(previousPoint[0], previousPoint[1]);
+        ctx.lineTo(currentPoint[0], currentPoint[1]);
+
+        previousPoint = currentPoint;
+    }
+
+    ctx.stroke();
+
+};
+
+
+function dragStart() {
+    g_coords = [];
+};
+
+function dragMove() {
+    g_coords.push([]);
+};
+
+dragEnd = function() {
+
+};
+
+// from https://github.com/substack/point-in-polygon
+function isPointInPolygon(point, vs) {
+    // ray-casting algorithm based on
+    // http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html
+
+    var x = point[0], y = point[1];
+
+    var inside = false;
+    for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+        var xi = vs[i][0], yi = vs[i][1];
+        var xj = vs[j][0], yj = vs[j][1];
+
+        var intersect = ((yi > y) != (yj > y))
+            && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+
+    return inside;
+};
+
 
 function getDistance(point1, point2) {
     var a = point1.x - point2.x;
@@ -280,11 +321,6 @@ function getCanvasPoint(e)
 
   return tempCanvasPoint;
 }
-
-
-$( document ).mousemove(function( event ) {
-  mouseCurrentCanvasPoint = getCanvasPoint(event)
-});
 
 var sun = new Image();
 var moon = new Image();
@@ -621,6 +657,14 @@ function generateRandomKeypoints(imageSize, numberOfKeypoints) {
 }
 
 function drawLine(inMouseDownPoint, inMouseCurrentPoint) {
+
+    if (g_currentTranformationOperationState == TransformationOperation.ROTATE
+        || g_currentTranformationOperationState == TransformationOperation.SCALE) {
+        //continue
+    }else{
+        return;
+    }
+
     $("#lineSvgTag").css("display", "inline");
 
     var startx = Math.min(inMouseDownPoint.x, inMouseCurrentPoint.x);
@@ -668,11 +712,6 @@ function draw() {
     ctx.save();
 
     if (isDown) {
-//        ctx.beginPath();
-//        ctx.moveTo(mouseDownCanvasPoint.x, mouseDownCanvasPoint.y);
-//        ctx.lineTo(mouseCurrentCanvasPoint.x, mouseCurrentCanvasPoint.y);
-//        ctx.stroke();
-
         drawLine(mouseDownPoint, mouseCurrentPoint);
     }
 
@@ -681,6 +720,7 @@ function draw() {
     //now draw the keypoints
     var newKeypoints = getNewKeypoints(g_genKeypoints, g_scale, g_rotation, g_scaleDirection, g_transpose, {x: 0, y: 0}, {x: 512, y: 512});
 
+    drawClosingPolygon(ctx, g_coords);
 
     if(g_shouldDrawTriangles){
         var filteredKeypoints = filterBasedOnVisible(newKeypoints, {x: 512, y: 512});//input is canvas/imageCutout size
