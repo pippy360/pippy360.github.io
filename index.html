@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
       <script src="math.js" type="text/javascript"></script>
       <script src="http://d3js.org/d3.v3.min.js"></script>
-      <script src="cropping.js" type="text/javascript"></script>
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
     <style>
@@ -691,6 +690,34 @@ function drawLine(inMouseDownPoint, inMouseCurrentPoint) {
 }
 
 
+function filterBasedOnClosingPoly(keypoints, coords) {
+    if(coords.length == 0){
+        return keypoints;
+    }
+
+    var ret = [];
+    for (var i = 0; i < keypoints.length; i++) {
+        var keypoint = keypoints[i];
+        if(isPointInPolygon([keypoint.x, keypoint.y], coords)){
+            ret.push(keypoint);
+        }
+    }
+    return ret;
+}
+
+function getTransformedPolyPoints(coords, inScale, inRotation, inScaleDirection, inTranspose, centerPointOfRotation, imageSize) {
+    if(coords.length == 0){
+        return [];
+    }
+    var ret = [];
+    var transformationMat = getTransformationMatrix(inScale, inRotation, inTranspose, inScaleDirection, centerPointOfRotation, imageSize);
+    for (var i = 0; i < coords.length; i++) {
+        var tempKeypoint = applyTransformationMatToSingleKeypoint([[coords[i][0]],[coords[i][1]], [1]], transformationMat);
+        ret.push([tempKeypoint[0][0], tempKeypoint[1][0]]);
+    }
+    return ret;
+}
+
 function draw() {
 
     g_transpose = {
@@ -720,10 +747,13 @@ function draw() {
     //now draw the keypoints
     var newKeypoints = getNewKeypoints(g_genKeypoints, g_scale, g_rotation, g_scaleDirection, g_transpose, {x: 0, y: 0}, {x: 512, y: 512});
 
-    drawClosingPolygon(ctx, g_coords);
+    var transformedPolyPoints = getTransformedPolyPoints(g_coords, g_scale, g_rotation, g_scaleDirection, g_transpose, {x: 0, y: 0}, {x: 512, y: 512});
+    drawClosingPolygon(ctx, transformedPolyPoints);
 
     if(g_shouldDrawTriangles){
-        var filteredKeypoints = filterBasedOnVisible(newKeypoints, {x: 512, y: 512});//input is canvas/imageCutout size
+        var tempFilteredKeypointsStep = filterBasedOnVisible(newKeypoints, {x: 512, y: 512});//input is canvas/imageCutout size
+        var filteredKeypoints = filterBasedOnClosingPoly(tempFilteredKeypointsStep, transformedPolyPoints);//input is canvas/imageCutout size
+
         var triangles = getTheTriangles(filteredKeypoints);
         $("#number_of_triangles_output").html("Number of triangles: " + triangles.length);
         for (var i = 0; i < triangles.length; i++) {
