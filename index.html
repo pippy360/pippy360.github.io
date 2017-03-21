@@ -158,7 +158,7 @@ $("#bigBlueOuter").mousedown(function(e){
     mouseDownCanvasPoint = getCanvasPoint(e);
 
     if (g_currentTranformationOperationState == TransformationOperation.CROP) {
-      g_coords_transformation_mat = getTransformationMatrix(inScale, inRotation, inTranspose, inScaleDirection, centerPointOfRotation, imageSize);
+      g_coords_transformation_mat = getTransformationMatrix(g_scale, g_rotation, g_transpose, g_scaleDirection, {x: 0, y: 0}, {x: 512, y: 512});
       g_coords_transformation_mat = math.inv(g_coords_transformation_mat);
       g_coords = [];
     }
