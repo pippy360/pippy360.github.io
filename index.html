@@ -245,23 +245,22 @@ window.onload = function() {
 
 
 function drawClosingPolygon(ctx, inPoints) {
-
-    var previousPoint = inPoints[inPoints.length-1];
+    if (inPoints.length == 0) {
+        return;
+    }
+  
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
     ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
     ctx.beginPath();
 
-    for (var i = 0; i < inPoints.length; i++) {
+    ctx.moveTo(inPoints[0][0], inPoints[0][1]);
+    for (var i = 1; i < inPoints.length; i++) {//i = 1 to skip first point
         var currentPoint = inPoints[i];
-
-        ctx.moveTo(previousPoint[0], previousPoint[1]);
         ctx.lineTo(currentPoint[0], currentPoint[1]);
-
-        previousPoint = currentPoint;
     }
 
+    ctx.closePath();
     ctx.stroke();
-
 };
 
 
@@ -581,7 +580,7 @@ function drawTriangleWithColour(ctx, tri, colour) {
     ctx.moveTo(tri[0].x, tri[0].y);
     ctx.lineTo(tri[1].x, tri[1].y);
     ctx.lineTo(tri[2].x, tri[2].y);
-    ctx.lineTo(tri[0].x, tri[0].y);
+    ctx.closePath();
     ctx.stroke();
 }
 
