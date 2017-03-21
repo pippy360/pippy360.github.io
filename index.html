@@ -258,8 +258,12 @@ function drawClosingPolygon(ctx, inPoints) {
         var currentPoint = inPoints[i];
         ctx.lineTo(currentPoint[0], currentPoint[1]);
     }
-
     ctx.closePath();
+  
+    //fill
+    ctx.fillStyle = "#FF0000";
+    ctx.mozFillRule = 'evenodd'; //for old firefox 1~30
+    ctx.fill('evenodd'); //for firefox 31+, IE 11+, chrome
     ctx.stroke();
 };
 
