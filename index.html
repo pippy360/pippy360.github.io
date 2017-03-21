@@ -723,7 +723,7 @@ function getTransformedPolyPoints(coords, inScale, inRotation, inScaleDirection,
     }
   
     var transformationMat = getTransformationMatrix(inScale, inRotation, inTranspose, inScaleDirection, centerPointOfRotation, imageSize);
-    var tempCoords = applyTransformationToEveryPolyPoint(tempCoords, g_coords_transformation_mat);
+    var tempCoords = applyTransformationToEveryPolyPoint(coords, g_coords_transformation_mat);
     return applyTransformationToEveryPolyPoint(tempCoords, transformationMat);
 }
 
