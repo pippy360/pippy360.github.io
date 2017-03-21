@@ -108,6 +108,7 @@ var g_savedRotation = 0;
 var g_rotation = 0;
 var g_genKeypoints = [];
 var g_coords = [];
+var g_coords_transformation_mat = getIdentityMatrix();
 
 var g_savedTranspose = {
     x: 0,
@@ -157,7 +158,9 @@ $("#bigBlueOuter").mousedown(function(e){
     mouseDownCanvasPoint = getCanvasPoint(e);
 
     if (g_currentTranformationOperationState == TransformationOperation.CROP) {
-        g_coords = [];
+      g_coords_transformation_mat = getTransformationMatrix(inScale, inRotation, inTranspose, inScaleDirection, centerPointOfRotation, imageSize);
+      g_coords_transformation_mat = math.inv(g_coords_transformation_mat);
+      g_coords = [];
     }
 
 });
@@ -704,18 +707,24 @@ function filterBasedOnClosingPoly(keypoints, coords) {
     }
     return ret;
 }
-
-function getTransformedPolyPoints(coords, inScale, inRotation, inScaleDirection, inTranspose, centerPointOfRotation, imageSize) {
-    if(coords.length == 0){
-        return [];
-    }
+  
+function applyTransformationToEveryPolyPoint(coords, transformationMat) {
     var ret = [];
-    var transformationMat = getTransformationMatrix(inScale, inRotation, inTranspose, inScaleDirection, centerPointOfRotation, imageSize);
     for (var i = 0; i < coords.length; i++) {
         var tempKeypoint = applyTransformationMatToSingleKeypoint([[coords[i][0]],[coords[i][1]], [1]], transformationMat);
         ret.push([tempKeypoint[0][0], tempKeypoint[1][0]]);
     }
     return ret;
+}
+
+function getTransformedPolyPoints(coords, inScale, inRotation, inScaleDirection, inTranspose, centerPointOfRotation, imageSize) {
+    if(coords.length == 0){
+        return [];
+    }
+  
+    var transformationMat = getTransformationMatrix(inScale, inRotation, inTranspose, inScaleDirection, centerPointOfRotation, imageSize);
+    var tempCoords = applyTransformationToEveryPolyPoint(tempCoords, g_coords_transformation_mat);
+    return applyTransformationToEveryPolyPoint(tempCoords, transformationMat);
 }
 
 function draw() {
