@@ -253,6 +253,12 @@ function drawClosingPolygon(ctx, inPoints) {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
     ctx.beginPath();
 
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, 512);
+    ctx.lineTo(512, 512);
+    ctx.lineTo(512, 0);
+    ctx.closePath();
+  
     ctx.moveTo(inPoints[0][0], inPoints[0][1]);
     for (var i = 1; i < inPoints.length; i++) {//i = 1 to skip first point
         var currentPoint = inPoints[i];
