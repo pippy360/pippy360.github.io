@@ -34,6 +34,8 @@
                 <button class="btn btn-default" onclick="changeCurrnetOperation(TransformationOperation.ROTATE)" >Rotate</button>
                 <button class="btn btn-default" onclick="changeCurrnetOperation(TransformationOperation.CROP)" >Crop</button>
                 <button class="btn btn-default" onclick="toggleDrawTrianglesMode()" >Toggle DrawTriangles</button>
+                <button class="btn btn-default" style="float:right;" onclick="callSearch()" >CompareImages</button>
+
             </p>
             <p>
                 Click and drag on the first image to apply a transformation.
@@ -103,7 +105,11 @@ var g_minTriArea = 100;//11000;
 var g_maxTriArea = 21000;
 var g_shouldDrawTriangles = true;
 var g_scale = 1;
+var g_currentScale= 1;
+var g_savedScale = 1;
 var g_scaleDirection = 0;
+var g_currentScaleDirection = 0;
+var g_savedScaleDirection = 0;
 var g_savedRotation = 0;
 var g_rotation = 0;
 var g_genKeypoints = [];
@@ -144,7 +150,7 @@ function changeCurrnetOperation(newState) {
     }
 }
 
-$("#bigBlueOuter").mousedown(function(e){
+$("#canvas").mousedown(function(e){
 
     var y = (e.pageY - mouseDownPoint.y);
     mouseCurrentPoint.y = e.pageY;
@@ -165,8 +171,8 @@ $("#bigBlueOuter").mousedown(function(e){
 
 });
 
-$(document).mousemove(function(e){
-    mouseCurrentCanvasPoint = getCanvasPoint(event);
+$("#canvas").mousemove(function(e){
+    mouseCurrentCanvasPoint = getCanvasPoint(e);
     if (isDown && computeDistance(e) > 20 ) {
         var y = (e.pageY - mouseDownPoint.y);
         mouseCurrentPoint.y = e.pageY;
@@ -187,13 +193,17 @@ $(document).mousemove(function(e){
           if (direction < 0) {
               direction = (360 + (direction));
           }
-          g_scaleDirection = direction;
+          g_currentScaleDirection = direction;
 
-          g_scale = Math.sqrt(Math.pow(y, 2) + Math.pow(x, 2));
-          g_scale /= div;
-          if (g_scale < 1){
-              g_scale = 1
+          g_currentScale = Math.sqrt(Math.pow(y, 2) + Math.pow(x, 2));
+          g_currentScale /= div;
+          if (g_currentScale < 1){
+              g_currentScale = 1
           }
+
+          g_scale = g_savedScale * g_currentScale;
+          g_scaleDirection
+
           console.log("g_scale: " + extraRotation);
 
       }else if(g_currentTranformationOperationState == TransformationOperation.TRANSPOSE) {
@@ -227,6 +237,9 @@ $(document).mouseup(function(e) {
             };
         }else if(g_currentTranformationOperationState == TransformationOperation.CROP) {
 
+        }else if(g_currentTranformationOperationState == TransformationOperation.SCALE) {
+            g_savedScale = g_scale;
+            g_savedScaleDirection = g_currentScaleDirection;
         }
     }
 });
@@ -268,12 +281,39 @@ function drawClosingPolygon(ctx, inPoints) {
   
     //fill
     ctx.fillStyle = "#f2f2f2";
-    ctx.fillStyle = 'rgba(242, 242, 242, 0.3)';
+    ctx.fillStyle = 'rgba(255, 255, 255, 1.0)';
+    if(isDown && g_currentTranformationOperationState == TransformationOperation.CROP){
+        ctx.fillStyle = 'rgba(242, 242, 242, 0.3)';
+    }
     ctx.mozFillRule = 'evenodd'; //for old firefox 1~30
     ctx.fill('evenodd'); //for firefox 31+, IE 11+, chrome
     ctx.stroke();
 };
 
+function callSearch() {
+    var canvas1 = document.getElementById('canvas');
+    var image1 = canvas1.toDataURL("image/png").replace("image/png", "image/octet-stream");  // here is the most important part because if you dont replace you will get a DOM 18 exception.
+    var canvas2 = document.getElementById('canvas2');
+    var image2 = canvas2.toDataURL("image/png").replace("image/png", "image/octet-stream");  // here is the most important part because if you dont replace you will get a DOM 18 exception.
+
+    var transformedPolyPoints = getTransformedPolyPoints(g_coords, g_scale, g_rotation, g_scaleDirection, g_transpose, {x: 0, y: 0}, {x: 512, y: 512});
+    var newKeypoints = getNewKeypoints(g_genKeypoints, g_scale, g_rotation, g_scaleDirection, g_transpose, {x: 0, y: 0}, {x: 512, y: 512});
+    var tempFilteredKeypointsStep = filterBasedOnVisible(newKeypoints, {x: 512, y: 512});//input is canvas/imageCutout size
+    var filteredKeypoints = filterBasedOnClosingPoly(tempFilteredKeypointsStep, transformedPolyPoints);//input is canvas/imageCutout size
+
+    var info = {
+        'image1': {
+            'imageData': image1,
+            'keypoints': filteredKeypoints
+        },
+        'image2': {
+            'imageData': image2,
+            'keypoints': g_genKeypoints
+        }
+    };
+
+    console.log("called");
+}
 
 function dragStart() {
     g_coords = [];
@@ -325,6 +365,7 @@ function getCanvasPoint(e)
   if(e.offsetX) {
       tempCanvasPoint.x = e.offsetX;
       tempCanvasPoint.y = e.offsetY;
+      console.log({x: e.offsetX, y: e.offsetY});
   }
   else if(e.layerX) {
       tempCanvasPoint.x = e.layerX;
