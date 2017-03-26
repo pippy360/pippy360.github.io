@@ -54,7 +54,7 @@
         <line id="line" x1="0" y1="0" x2="0" y2="0" style="stroke:rgb(255,0,0);stroke-width:2" />
     </svg>
     <!-- jQuery first, then Tether, then Bootstrap JS. -->
-    <script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n" crossorigin="anonymous"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
   </body>
@@ -202,10 +202,7 @@ $("#canvas").mousemove(function(e){
               g_currentScale = 1
           }
 
-          g_scale = g_savedScale * g_currentScale;
-          g_scaleDirection
-
-          console.log("g_scale: " + extraRotation);
+//          console.log("g_scale: " + extraRotation);
 
       }else if(g_currentTranformationOperationState == TransformationOperation.TRANSPOSE) {
 
@@ -302,18 +299,42 @@ function callSearch() {
     var tempFilteredKeypointsStep = filterBasedOnVisible(newKeypoints, {x: 512, y: 512});//input is canvas/imageCutout size
     var filteredKeypoints = filterBasedOnClosingPoly(tempFilteredKeypointsStep, transformedPolyPoints);//input is canvas/imageCutout size
 
+    var regex = /^data:.+\/(.+);base64,(.*)$/;
+
+    var matches;
+    matches = image1.match(regex);
+    var data1 = matches[2];
+    matches = image2.match(regex);
+    var data2 = matches[2];
+
     var info = {
         'image1': {
-            'imageData': image1,
+            'imageData': data1,
             'keypoints': filteredKeypoints
         },
         'image2': {
-            'imageData': image2,
+            'imageData': data2,
             'keypoints': g_genKeypoints
         }
     };
 
-    console.log("called");
+    //console.log(info)
+
+    $.ajax({
+        url: 'http://104.198.245.1/',
+        type: 'POST',
+        data: JSON.stringify(info),
+        contentType: 'application/json; charset=utf-8',
+        dataType: 'json',
+        async: false,
+        success: function(msg) {
+            console.log(msg);
+        },
+        error: function(msg) {
+
+        }
+    });
+
 }
 
 function dragStart() {
@@ -366,7 +387,7 @@ function getCanvasPoint(e)
   if(e.offsetX) {
       tempCanvasPoint.x = e.offsetX;
       tempCanvasPoint.y = e.offsetY;
-      console.log({x: e.offsetX, y: e.offsetY});
+//      console.log({x: e.offsetX, y: e.offsetY});
   }
   else if(e.layerX) {
       tempCanvasPoint.x = e.layerX;
@@ -841,9 +862,12 @@ function draw() {
 
     ctx.translate(g_transpose.x, g_transpose.y);
     ctx.rotate(g_rotation * Math.PI/180.0 * -1.0);
-    ctx.rotate(g_scaleDirection * Math.PI/180.0 * -1.0);
-    ctx.scale(Math.sqrt(g_scale), 1.0/Math.sqrt(g_scale));
-    ctx.rotate(g_scaleDirection * Math.PI/180.0);
+    ctx.rotate(g_currentScaleDirection * Math.PI/180.0 * -1.0);
+    ctx.scale(Math.sqrt(g_currentScale), 1.0/Math.sqrt(g_scale));
+    ctx.rotate(g_currentScaleDirection * Math.PI/180.0);
+//    ctx.rotate(g_savedScaleDirection * Math.PI/180.0 * -1.0);
+//    ctx.scale(Math.sqrt(g_savedScale), 1.0/Math.sqrt(g_scale));
+//    ctx.rotate(g_savedScaleDirection * Math.PI/180.0);
 //    ctx.translate(sun.width/2, sun.width/2);
     ctx.drawImage(sun, -sun.width/2, -sun.height/2);
 
