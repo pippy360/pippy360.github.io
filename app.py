@@ -33,13 +33,14 @@ def hello_world():
         #data = request.data
         #dataDict = json.loads(search)
         imageData1 = data['image1']['imageData']
+        imageName = "imageToSave"
 
-        with open("imageToSave.png", "wb") as fh:
+        with open(imageName + "1.jpg", "wb") as fh:
             fh.write(decodestring(imageData1))
 
         imageData2 = data['image2']['imageData']
 
-        with open("imageToSave2.png", "wb") as fh:
+        with open(imageName + "2.jpg", "wb") as fh:
             fh.write(decodestring(imageData2))
 
         keypoints1 = { "keypoints": data['image1']['keypoints']};
