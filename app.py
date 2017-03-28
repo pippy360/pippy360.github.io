@@ -6,66 +6,81 @@ from flask import jsonify
 from flask_cors import CORS, cross_origin
 app = Flask(__name__)
 
+g_dir = "./inputImages/"+imageName+"/"
 
 
 def dumpToJson(kps, filename):
-        import json
-        calcdKeypoints = []
-        for kp in kps:
-                tempObj = {}
-                tempObj["x"] = int(kp[0])
-                tempObj["y"] = int(kp[1])
-                calcdKeypoints.append(tempObj)
+	import json
+	calcdKeypoints = []
+	for kp in kps:
+		tempObj = {}
+		tempObj["x"] = int(kp[0])
+		tempObj["y"] = int(kp[1])
+		calcdKeypoints.append(tempObj)
 
-        keyPoints = {}
-        keyPoints['keypoints'] = calcdKeypoints
-        output = {}
-        output['output'] = keyPoints
+	keyPoints = {}
+	keyPoints['keypoints'] = calcdKeypoints
+	output = {}
+	output['output'] = keyPoints
 
-        f = open(filename,'w+')
-        f.write( json.dumps(output) )
+	f = open(filename,'w+')
+	f.write( json.dumps(output) )
+
+def saveImageAndData(imageName, imageBase64Encoded, keypoints):
+	import os
+	
+	dir = g_dir
+	os.mkdir(dir)
+	
+	imageData = decodestring(imageBase64Encoded)
+	with open(dir + imageName + ".jpg", "wb") as fh:
+	    fh.write(imageData)
+
+	jsonOutput = {
+		"output": { 
+			"keypoints": keypoints
+		}
+	}
+	with open(dir + "keypoints.json", "wb") as fh:
+	    fh.write(json.dumps(jsonOutput))	
 
 
-@app.route('/', methods=['GET', 'POST'])
+def saveImageAndData(imageName, jsonData):
+	imageBase64Encoded = jsonData['imageData']
+	keypoints = jsonData['keypoints']
+	saveImageAndData(imageName, imageBase64Encoded, keypoints)
+
+
+def runTheApp(imageName1, imageName2):
+	dir = g_dir
+	
+	commandStr = 'ls'#'./app compareTwoImages '+ imageName1 + ' ' + imageName2
+	print 'Running command: \t' + commandStr
+	output = commands.getstatusoutput(commandStr)
+	print 'Finished: \t' + commandStr
+	
+	#return output#This is never used, data is saved to file instead
+	
+
+@app.route('/runTestWithJsonData', methods=['GET', 'POST'])
 def hello_world():
-        #search = request.args.get('search')
-        data = request.get_json(silent=True)
-        #data = request.data
-        #dataDict = json.loads(search)
-        imageData1 = data['image1']['imageData']
-        imageName = "imageToSave"
 
-        with open(imageName + "1.jpg", "wb") as fh:
-            fh.write(decodestring(imageData1))
+	#prep the data
+	data = request.get_json(silent=True)
 
-        imageData2 = data['image2']['imageData']
+	imageName1 = "someName1"
+	saveImageAndData(imageName1, data['image1'])
+	imageName2 = "someName2"
+	saveImageAndData(imageName2, data['image2'])
+	
+	#run the app with the data
+	runTheApp(imageName1, imageName2)
+	
+	#read the results
+	
 
-        with open(imageName + "2.jpg", "wb") as fh:
-            fh.write(decodestring(imageData2))
-
-        keypoints1 = { "keypoints": data['image1']['keypoints']};
-        jsonOutput1 = {
-                "output": keypoints1
-        }
-
-        with open("keypoints1.json", "wb") as fh:
-            fh.write(json.dumps(jsonOutput1))
-
-        keypoints2 = { "keypoints": data['image2']['keypoints']};
-        jsonOutput2 = {
-                "output": keypoints2
-        }
-
-        with open("keypoints2.json", "wb") as fh:
-            fh.write(json.dumps(jsonOutput2))
-
-        #now save the actual data...
-        #save the keypoints and the images
-        #call the c code...
-        #return a loading?/updates???how??
-
-        #return "{ City: 'Moscow', Age: 25 }"#'<h1>Hello, World!: '
-        return jsonify("{ City: 'Moscow', Age: 25 }")
+	#send the results back
+	return jsonify("{ count: 123 }")
 
 
 
