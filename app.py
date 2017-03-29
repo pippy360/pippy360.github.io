@@ -7,7 +7,7 @@ from flask_cors import CORS, cross_origin
 app = Flask(__name__)
 
 def g_getDir(imageName):
-	return "./inputImages/"+imageName+"/"
+	return "../inputImages/"+imageName+"/"
 
 
 def dumpToJson(kps, filename):
@@ -55,12 +55,12 @@ def saveImageAndData(imageName, jsonData):
 
 def runTheApp(imageName1, imageName2):
 	import commands
-	commandStr = 'ls'#'./app compareTwoImages '+ imageName1 + ' ' + imageName2
+	commandStr = './app compareTwoImages '+ imageName1 + ' ' + imageName2
 	print 'Running command: \t' + commandStr
 	output = commands.getstatusoutput(commandStr)
 	print 'Finished: \t\t' + commandStr
 
-	#return output#This is never used, data is saved to file instead
+	return output[1]
 
 
 @app.route('/runTestWithJsonData', methods=['GET', 'POST'])
@@ -75,13 +75,13 @@ def hello_world():
 	saveImageAndData(imageName2, data['image2'])
 
 	#run the app with the data
-	runTheApp(imageName1, imageName2)
+	result = runTheApp(imageName1, imageName2)
 
 	#read the results
 
 
 	#send the results back
-	return jsonify("{ count: 123 }")
+	return jsonify(result)
 
 
 

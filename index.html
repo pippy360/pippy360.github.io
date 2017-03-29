@@ -47,6 +47,11 @@
             <canvas id="canvas2" width="512" height="512"></canvas>
         </div>
         <div id="output">
+            <span id="searchResultsOutput">
+                <div id="searchResultsOutputDiv" class="alert alert-success" role="alert">
+                  <strong>Matched!</strong> X matches found
+                </div>
+            </span>
             <span id="number_of_triangles_output"></span>
         </div>
     </div>
@@ -318,7 +323,7 @@ function callSearch() {
         }
     };
 
-    //console.log(info)
+    $("#searchResultsOutputDiv").html("loading...");
 
     $.ajax({
         url: 'http://104.198.245.1/runTestWithJsonData',
@@ -326,15 +331,15 @@ function callSearch() {
         data: JSON.stringify(info),
         contentType: 'application/json; charset=utf-8',
         dataType: 'json',
-        async: false,
+        async: true,
         success: function(msg) {
             console.log(msg);
+            $("#searchResultsOutputDiv").html("Found this many matches: " + msg);
         },
         error: function(msg) {
 
         }
     });
-
 }
 
 function dragStart() {
