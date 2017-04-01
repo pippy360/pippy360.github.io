@@ -539,31 +539,6 @@ function getNewKeypoints(keypoints, inScale, inRotation, inScaleDirection, inTra
     return finalKeypoints;
 }
 
-function getArea(tri){
-    var a = tri[0];
-    var b = tri[1];
-    var c = tri[2];
-    var one = (a.x-c.x)*(b.y-a.y);
-    var two = (a.x-b.x)*(c.y-a.y);
-    var area = Math.abs(one-two)*0.5;
-    return area;
-};
-
-function checkIfPointsAreClose(tempTri) {
-    var pt1 = tempTri[0];
-    var pt2 = tempTri[1];
-    var pt3 = tempTri[2];
-
-    return getDistance(pt1, pt2) < g_maxPntDist
-        && getDistance(pt1, pt3) < g_maxPntDist
-        && getDistance(pt1, pt2) > g_minPntDist
-        && getDistance(pt1, pt3) > g_minPntDist;
-}
-
-function isValidTriangle(tempTri) {
-    return getArea(tempTri) > g_minTriArea && getArea(tempTri) < g_maxTriArea && checkIfPointsAreClose(tempTri);
-}
-
 function filterValidPoints(headPoint, tailcombs) {
     var ret = [];
 
