@@ -287,8 +287,9 @@ function applyChangesToTransformations(interactiveImageTransformations, transfor
     var currentScale = transformationChanges.currentScale;
     var savedScaleDirection = interactiveImageTransformations.scaleDirection;
     var currentScaleDirection = transformationChanges.currentScaleDirection;
+    console.log(currentScale);
     return {
-        scale: currentScale + savedScale,
+        scale: savedScale*currentScale,
         scaleDirection: currentScaleDirection + savedScaleDirection,
         rotation: currentRotation + savedRotation,
         translate: {
@@ -392,7 +393,7 @@ function handleMouseUpTranslate(pageMousePosition) {
 
 function handleMouseUpScale() {
     var savedScale = g_interactiveImageTransformation.scale;
-    g_interactiveImageTransformation.scale = savedScale + g_transformationChanges.currentScale;
+    g_interactiveImageTransformation.scale = savedScale * g_transformationChanges.currentScale;
     var savedScaleDirection = g_interactiveImageTransformation.scaleDirection;
     g_interactiveImageTransformation.scaleDirection = savedScaleDirection + g_transformationChanges.currentScaleDirection;
 }
