@@ -220,11 +220,11 @@ function drawBackgroupImageWithTransformations(canvasContext, image, transformat
     var translation = transformations.translate;
     canvasContext.translate(-translation.x, -translation.y);
 
-    canvasContext.rotate(transformations.scaleDirection * Math.PI / 180.0 * -1.0);
-    canvasContext.scale(Math.sqrt(transformations.currentScale), 1.0 / Math.sqrt(transformations.currentScale));
-    canvasContext.rotate(transformations.scaleDirection * Math.PI / 180.0);
-
     canvasContext.rotate(transformations.rotation * Math.PI / 180.0 * -1.0);
+
+    canvasContext.rotate(transformations.scaleDirection * Math.PI / 180.0 * -1.0);
+    canvasContext.scale(Math.sqrt(transformations.scale), 1.0 / Math.sqrt(transformations.scale));
+    canvasContext.rotate(transformations.scaleDirection * Math.PI / 180.0);
 
     canvasContext.drawImage(image, -image.width / 2, -image.height / 2);
 
@@ -283,7 +283,13 @@ function applyChangesToTransformations(interactiveImageTransformations, transfor
     var translateChange = transformationChanges.currentTranslate;
     var savedRotation = interactiveImageTransformations.rotation;
     var currentRotation = transformationChanges.currentRotation;
+    var savedScale = interactiveImageTransformations.scale;
+    var currentScale = transformationChanges.currentScale;
+    var savedScaleDirection = interactiveImageTransformations.scaleDirection;
+    var currentScaleDirection = transformationChanges.currentScaleDirection;
     return {
+        scale: currentScale + savedScale,
+        scaleDirection: currentScaleDirection + savedScaleDirection,
         rotation: currentRotation + savedRotation,
         translate: {
             x: translateSaved.x + translateChange.x,
@@ -384,8 +390,11 @@ function handleMouseUpTranslate(pageMousePosition) {
     g_interactiveImageTransformation.translate = addTwoPoints(g_interactiveImageTransformation.translate, translateDelta);
 }
 
-function handleMouseUpScale(pageMousePosition) {
-    //save this as the starting position
+function handleMouseUpScale() {
+    var savedScale = g_interactiveImageTransformation.scale;
+    g_interactiveImageTransformation.scale = savedScale + g_transformationChanges.currentScale;
+    var savedScaleDirection = g_interactiveImageTransformation.scaleDirection;
+    g_interactiveImageTransformation.scaleDirection = savedScaleDirection + g_transformationChanges.currentScaleDirection;
 }
 
 function handleMouseUpRotate() {
@@ -429,7 +438,18 @@ function handleMouseMoveTranslate(pageMousePosition) {
 }
 
 function handleMouseMoveScale(pageMousePosition) {
-    //save this as the starting position
+    var mouseDownPoint = g_transformationChanges.mouseDownPosition;
+    var y = (pageMousePosition.y - mouseDownPoint.y);
+    var x = (pageMousePosition.x - mouseDownPoint.x);
+
+    var extraRotation = Math.atan2(y, x) * (180.0 / Math.PI) * -1;
+    if (extraRotation < 0) {
+        extraRotation = (360 + (extraRotation));
+    }
+    extraRotation = extraRotation % 360;
+    g_transformationChanges.currentScaleDirection = extraRotation;
+    g_transformationChanges.currentScale = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
+    g_transformationChanges.currentScale /= 100;
 }
 
 function handleMouseMoveRotate(pageMousePosition) {
@@ -458,7 +478,7 @@ function handleMouseMove(e) {
             handleMouseMoveTranslate(pageMousePosition, getInteractiveImageTransformations());
             break;
         case enum_TransformationOperation.SCALE:
-            handleMouseMoveScale();
+            handleMouseMoveScale(pageMousePosition);
             break;
         case enum_TransformationOperation.ROTATE:
             handleMouseMoveRotate(pageMousePosition);
