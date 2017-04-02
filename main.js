@@ -18,6 +18,7 @@ var g_currentTranformationOperationState = enum_TransformationOperation.TRANSPOS
 
 var g_croppingPolygonPoints = [];
 var g_dogImage = new Image();
+var g_keypoints = [];
 
 function getBackgroundImage() {
     return g_dogImage;
@@ -142,7 +143,10 @@ function convertKeypointsToMatrixKeypoint(keypoints) {
 }
 
 function convertTransformationObjectToTransformationMatrix(transformations) {
-
+    var ret = getIdentityMatrix();
+    ret = matrixMultiply(ret, getTranslateMatrix(100, 100));
+    ret = matrixMultiply(ret, getRotatoinMatrix(transformations.rotation));
+    return ret;
 }
 
 function applyTransformationMatToSingleKeypoint(keypoint, transformationMat) {
@@ -201,6 +205,22 @@ function minusTwoPoints(point1, point2) {
     }
 }
 
+function generateRandomKeypoints(imageSize, numberOfKeypoints) {
+
+   var ret = [];
+   for (var i = 0; i < numberOfKeypoints; i++) {
+
+       var x = Math.floor((Math.random() * imageSize.x));
+       var y = Math.floor((Math.random() * imageSize.y));
+       var kp = {
+           x: x,
+           y: y
+       };
+       ret.push(kp)
+   }
+   return ret;
+}
+
 // #####
 // #     # #####    ##   #    #
 // #     # #    #  #  #  #    #
@@ -244,7 +264,13 @@ function drawLineFromPointToMousePosition(ctx) {
 }
 
 function drawKeypointsWithTransformation(interactiveCanvasContext, keypoints, interactiveImageTransformations) {
-
+    var transformedKeypoints = computeTransformedKeypoints(keypoints, interactiveImageTransformations);
+    for(var i=0; i < transformedKeypoints.length; i++)
+    {
+        var currentKeypoint = transformedKeypoints[i];
+        interactiveCanvasContext.rect(currentKeypoint.x,currentKeypoint.y,3,3);
+        interactiveCanvasContext.stroke();
+    }
 }
 
 function computeTriangles(filteredKeypoints) {
@@ -274,7 +300,7 @@ function drawCroppingPoints() {
 function getVisableKeypoints() {
     // var tempFilteredKeypointsStep = filterBasedOnVisible(newKeypoints, {x: 512, y: 512});//input is canvas/imageCutout size
     // filterBasedOnClosingPoly(tempFilteredKeypointsStep, transformedPolyPoints);//input is canvas/imageCutout size
-    return [];
+    return g_keypoints;
 }
 
 function applyChangesToTransformations(interactiveImageTransformations, transformationChanges) {
@@ -287,7 +313,6 @@ function applyChangesToTransformations(interactiveImageTransformations, transfor
     var currentScale = transformationChanges.currentScale;
     var savedScaleDirection = interactiveImageTransformations.scaleDirection;
     var currentScaleDirection = transformationChanges.currentScaleDirection;
-    console.log(currentScale);
     return {
         scale: savedScale*currentScale,
         scaleDirection: currentScaleDirection + savedScaleDirection,
@@ -546,6 +571,7 @@ function setCurrnetOperation(newState) {
 }
 
 function init() {
+    g_keypoints = generateRandomKeypoints({x: 512, y: 512}, 20);
     wipeTransformationChanges();
     setCurrnetOperation(enum_TransformationOperation.TRANSLATE);
     g_dogImage.src = 'dog1_resize.jpg';
