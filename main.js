@@ -8,13 +8,13 @@
 
 var g_isMouseDownAndClickedOnCanvas = false;
 
-var g_TransformationOperation = {
+var enum_TransformationOperation = {
     TRANSLATE: 1,
     SCALE: 2,
     ROTATE: 3,
     CROP: 4
 };
-var g_currentTranformationOperationState = g_TransformationOperation.TRANSPOSE;
+var g_currentTranformationOperationState = enum_TransformationOperation.TRANSPOSE;
 
 var g_croppingPolygonPoints = [];
 var g_dogImage = new Image();
@@ -26,20 +26,23 @@ function getBackgroundImage() {
 function getCroppingPoints() {
     return [];
 }
+var g_transformationChanges;//TODO: rename to something better
 
-var g_transformationChanges = {//TODO: rename to something better
-    currentScale: 1,
-    currentScaleDirection: 0,
-    currentRotation: 0,
-    currentTranslate: {
-        x: 0,
-        y: 0
-    },
-    mouseDownPosition: {//value is only valid if g_isMouseDownAndClickedOnCanvas == true
-        X: 0,
-        Y: 0
-    }
-};
+function wipeTransformationChanges() {
+    g_transformationChanges = {
+        currentScale: 1,
+        currentScaleDirection: 0,
+        currentRotation: 0,
+        currentTranslate: {
+            x: 0,
+            y: 0
+        },
+        mouseDownPosition: {//value is only valid if g_isMouseDownAndClickedOnCanvas == true
+            X: 0,
+            Y: 0
+        }
+    };
+}
 
 function getTransformationChanges() {
     return g_transformationChanges;
@@ -48,7 +51,7 @@ function getTransformationChanges() {
 var g_interactiveImageTransformation = {
     scale: 1,
     scaleDirection: 0,
-    currentRotation: 0,
+    rotation: 0,
     translate: {
         x: 0,
         y: 0
@@ -207,11 +210,11 @@ function minusTwoPoints(point1, point2) {
 // #####   #    # #    # #    #
 
 
-function drawBackgroupImageWithTransformations(canvasContext, image, transformations, currentMousePosition) {
+function drawBackgroupImageWithTransformations(canvasContext, image, transformations) {
 
     canvasContext.save();
 
-    //TODO: center image
+    //Center image
     canvasContext.translate(canvasContext.canvas.width / 2, canvasContext.canvas.height / 2);
 
     var translation = transformations.translate;
@@ -221,7 +224,7 @@ function drawBackgroupImageWithTransformations(canvasContext, image, transformat
     canvasContext.scale(Math.sqrt(transformations.currentScale), 1.0 / Math.sqrt(transformations.currentScale));
     canvasContext.rotate(transformations.scaleDirection * Math.PI / 180.0);
 
-    canvasContext.rotate(transformations.rotation * Math.PI / 180.0);
+    canvasContext.rotate(transformations.rotation * Math.PI / 180.0 * -1.0);
 
     canvasContext.drawImage(image, -image.width / 2, -image.height / 2);
 
@@ -275,7 +278,18 @@ function getVisableKeypoints() {
 }
 
 function applyChangesToTransformations(interactiveImageTransformations, transformationChanges) {
-    return interactiveImageTransformations;
+
+    var translateSaved = interactiveImageTransformations.translate;
+    var translateChange = transformationChanges.currentTranslate;
+    var savedRotation = interactiveImageTransformations.rotation;
+    var currentRotation = transformationChanges.currentRotation;
+    return {
+        rotation: currentRotation + savedRotation,
+        translate: {
+            x: translateSaved.x + translateChange.x,
+            y: translateSaved.y + translateChange.y
+        }
+    }
 }
 
 function draw() {
@@ -365,8 +379,9 @@ function getCurrentCanvasMousePosition(e) {
 }
 
 function handleMouseUpTranslate(pageMousePosition) {
-    var previousSaved = g_interactiveImageTransformation.translateSavedPosition;
-    g_interactiveImageTransformation.translateSavedPosition = addTwoPoints(previousSaved, pageMousePosition);
+    var translateDelta = minusTwoPoints(g_transformationChanges.mouseDownPosition, pageMousePosition);
+    g_transformationChanges.currentTranslate = translateDelta;
+    g_interactiveImageTransformation.translate = addTwoPoints(g_interactiveImageTransformation.translate, translateDelta);
 }
 
 function handleMouseUpScale(pageMousePosition) {
@@ -374,7 +389,8 @@ function handleMouseUpScale(pageMousePosition) {
 }
 
 function handleMouseUpRotate() {
-    //just save the rotation 
+    var savedRotation = g_interactiveImageTransformation.rotation;
+    g_interactiveImageTransformation.rotation = savedRotation + g_transformationChanges.currentRotation;
 }
 
 function handleMouseUpCrop(mousePosition) {
@@ -386,37 +402,47 @@ function handleMouseUp(e) {
     var canvasMousePosition = getCurrentCanvasMousePosition(e);
 
     switch (g_currentTranformationOperationState) {
-        case g_TransformationOperation.TRANSLATE:
+        case enum_TransformationOperation.TRANSLATE:
             handleMouseUpTranslate(pageMousePosition);
             break;
-        case g_TransformationOperation.SCALE:
+        case enum_TransformationOperation.SCALE:
             handleMouseUpScale();
             break;
-        case g_TransformationOperation.ROTATE:
+        case enum_TransformationOperation.ROTATE:
             handleMouseUpRotate();
             break;
-        case g_TransformationOperation.CROP:
+        case enum_TransformationOperation.CROP:
             handleMouseUpCrop(canvasMousePosition);
             break;
         default:
             console.log("ERROR: Invalid state.");
             break;
     }
+
+    wipeTransformationChanges();
 }
 
 
 function handleMouseMoveTranslate(pageMousePosition) {
-    var transformation = g_interactiveImageTransformation;
-    var translateChange = minusTwoPoints(transformation.MouseDown, pageMousePosition);
-    transformation.translate = addTwoPoints(transformation.SavedPosition, translateChange)
+    var translateDelta = minusTwoPoints(g_transformationChanges.mouseDownPosition, pageMousePosition);
+    g_transformationChanges.currentTranslate = translateDelta;
 }
 
 function handleMouseMoveScale(pageMousePosition) {
     //save this as the starting position
 }
 
-function handleMouseMoveRotate() {
+function handleMouseMoveRotate(pageMousePosition) {
+    var mouseDownPoint = g_transformationChanges.mouseDownPosition;
+    var y = (pageMousePosition.y - mouseDownPoint.y);
+    var x = (pageMousePosition.x - mouseDownPoint.x);
 
+    var extraRotation = Math.atan2(y, x) * (180.0 / Math.PI) * -1;
+    if (extraRotation < 0) {
+        extraRotation = (360 + (extraRotation));
+    }
+    extraRotation = extraRotation % 360;
+    g_transformationChanges.currentRotation = extraRotation;
 }
 
 function handleMouseMoveCrop(mousePosition) {
@@ -428,16 +454,16 @@ function handleMouseMove(e) {
     var canvasMousePosition = getCurrentCanvasMousePosition(e);
 
     switch (g_currentTranformationOperationState) {
-        case g_TransformationOperation.TRANSLATE:
+        case enum_TransformationOperation.TRANSLATE:
             handleMouseMoveTranslate(pageMousePosition, getInteractiveImageTransformations());
             break;
-        case g_TransformationOperation.SCALE:
+        case enum_TransformationOperation.SCALE:
             handleMouseMoveScale();
             break;
-        case g_TransformationOperation.ROTATE:
-            handleMouseMoveRotate();
+        case enum_TransformationOperation.ROTATE:
+            handleMouseMoveRotate(pageMousePosition);
             break;
-        case g_TransformationOperation.CROP:
+        case enum_TransformationOperation.CROP:
             handleMouseMoveCrop(canvasMousePosition);
             break;
         default:
@@ -447,15 +473,15 @@ function handleMouseMove(e) {
 }
 
 function handleMouseDownTranslate(canvasMousePosition) {
-    g_interactiveImageTransformation.MouseDown = canvasMousePosition;
+    //do nothing
 }
 
 function handleMouseDownScale(pageMousePosition) {
-    //save this as the starting position
+    //do nothing
 }
 
-function handleMouseDownRotate() {
-
+function handleMouseDownRotate(pageMousePosition) {
+    //do nothing
 }
 
 function handleMouseDownCrop(mousePosition) {
@@ -465,18 +491,18 @@ function handleMouseDownCrop(mousePosition) {
 function handleMouseDownOnCanvas(e) {
     var pageMousePosition = getCurrentPageMousePosition(e);
     var canvasMousePosition = getCurrentCanvasMousePosition(e);
-
+    g_transformationChanges.mouseDownPosition = pageMousePosition;
     switch (g_currentTranformationOperationState) {
-        case g_TransformationOperation.TRANSLATE:
+        case enum_TransformationOperation.TRANSLATE:
             handleMouseDownTranslate(pageMousePosition);
             break;
-        case g_TransformationOperation.SCALE:
+        case enum_TransformationOperation.SCALE:
             handleMouseDownScale();
             break;
-        case g_TransformationOperation.ROTATE:
-            handleMouseDownRotate();
+        case enum_TransformationOperation.ROTATE:
+            handleMouseDownRotate(pageMousePosition);
             break;
-        case g_TransformationOperation.CROP:
+        case enum_TransformationOperation.CROP:
             handleMouseDownCrop(canvasMousePosition);
             break;
         default:
@@ -486,7 +512,7 @@ function handleMouseDownOnCanvas(e) {
 }
 
 function applyTransformationEffects(state) {
-    if (state == g_TransformationOperation.TRANSLATE) {
+    if (state == enum_TransformationOperation.TRANSLATE) {
         $("#interactiveCanvas").addClass("move");
     } else {
         $("#interactiveCanvas").removeClass("move");
@@ -499,6 +525,8 @@ function setCurrnetOperation(newState) {
 }
 
 function init() {
+    wipeTransformationChanges();
+    setCurrnetOperation(enum_TransformationOperation.TRANSLATE);
     g_dogImage.src = 'dog1_resize.jpg';
     window.requestAnimationFrame(draw);
 }

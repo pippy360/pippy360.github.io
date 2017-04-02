@@ -30,13 +30,12 @@
         <div>
             <h1>Demo</h1>
             <p>
-                <button id="transposeButton" class="btn btn-default active" onclick="setCurrnetOperation(g_TransformationOperation.TRANSLATE)" >Move</button>
-                <button class="btn btn-default" onclick="setCurrnetOperation(g_TransformationOperation.SCALE)" >Scale</button>
-                <button class="btn btn-default" onclick="setCurrnetOperation(g_TransformationOperation.ROTATE)" >Rotate</button>
-                <button class="btn btn-default" onclick="setCurrnetOperation(g_TransformationOperation.CROP)" >Crop</button>
+                <button id="transposeButton" class="btn btn-default active" onclick="setCurrnetOperation(enum_TransformationOperation.TRANSLATE)" >Move</button>
+                <button class="btn btn-default" onclick="setCurrnetOperation(enum_TransformationOperation.SCALE)" >Scale</button>
+                <button class="btn btn-default" onclick="setCurrnetOperation(enum_TransformationOperation.ROTATE)" >Rotate</button>
+                <button class="btn btn-default" onclick="setCurrnetOperation(enum_TransformationOperation.CROP)" >Crop</button>
                 <button class="btn btn-default" onclick="toggleDrawTrianglesMode()" >Toggle DrawTriangles</button>
                 <button class="btn btn-default" style="float:right;" onclick="callSearch()" >CompareImages</button>
-
             </p>
             <p>
                 Click and drag on the first image to apply a transformation.
@@ -96,7 +95,7 @@
 //
 //
 //
-//var g_TransformationOperation = {
+//var enum_TransformationOperation = {
 //    TRANSPOSE: 1,
 //    SCALE: 2,
 //    ROTATE: 3,
@@ -104,7 +103,7 @@
 //};
 //
 ////SOURCE: GLOBALS g_global
-//var g_currentTranformationOperationState = g_TransformationOperation.TRANSPOSE;
+//var g_currentTranformationOperationState = enum_TransformationOperation.TRANSPOSE;
 //var g_showRedTriangles = false;//show the invalid triangles (red) on the original image
 //var g_numberOfKeypointsToGenerate = 20;
 //var g_maxPntDist = 300;
@@ -151,7 +150,7 @@
 //
 //function setCurrnetOperation(newState) {
 //    g_currentTranformationOperationState = newState;
-//    if (g_currentTranformationOperationState == g_TransformationOperation.TRANSPOSE) {
+//    if (g_currentTranformationOperationState == enum_TransformationOperation.TRANSPOSE) {
 //        $( "#canvas" ).addClass( "move" );
 //    } else {
 //        $( "#canvas" ).removeClass( "move" );
@@ -171,7 +170,7 @@
 //    mouseDownPoint.y = e.pageY;
 //    mouseDownCanvasPoint = getCanvasPoint(e);
 //
-//    if (g_currentTranformationOperationState == g_TransformationOperation.CROP) {
+//    if (g_currentTranformationOperationState == enum_TransformationOperation.CROP) {
 //      g_coords_transformation_mat = getTransformationMatrix(g_scale, g_rotation, g_transpose, g_scaleDirection, {x: 0, y: 0}, {x: 512, y: 512});
 //      g_coords_transformation_mat = math.inv(g_coords_transformation_mat);
 //      g_coords = [];
@@ -187,7 +186,7 @@
 //        var x = (e.pageX - mouseDownPoint.x);
 //        mouseCurrentPoint.x = e.pageX;
 //
-//      if (g_currentTranformationOperationState == g_TransformationOperation.ROTATE) {
+//      if (g_currentTranformationOperationState == enum_TransformationOperation.ROTATE) {
 //          //        ctx.restore();
 //
 //          var extraRotation = Math.atan2(y, x) * (180.0 / Math.PI) * -1;
@@ -195,7 +194,7 @@
 //              extraRotation = (360 + (extraRotation));
 //          }
 //          g_rotation = (g_savedRotation + extraRotation) % 360;
-//      }else if(g_currentTranformationOperationState == g_TransformationOperation.SCALE){
+//      }else if(g_currentTranformationOperationState == enum_TransformationOperation.SCALE){
 //            var div = 100;
 //          var direction = Math.atan2(y, x) * (180.0 / Math.PI) * -1;
 //          if (direction < 0) {
@@ -211,13 +210,13 @@
 //
 ////          console.log("g_scale: " + extraRotation);
 //
-//      }else if(g_currentTranformationOperationState == g_TransformationOperation.TRANSPOSE) {
+//      }else if(g_currentTranformationOperationState == enum_TransformationOperation.TRANSPOSE) {
 //
 //          g_currentTranspose = {
 //              x: x,
 //              y: y
 //          };
-//      }else if(g_currentTranformationOperationState == g_TransformationOperation.CROP) {
+//      }else if(g_currentTranformationOperationState == enum_TransformationOperation.CROP) {
 //          g_coords.push([mouseCurrentCanvasPoint.x, mouseCurrentCanvasPoint.y]);
 //      }
 //    }
@@ -229,9 +228,9 @@
 //
 //        $("#lineSvgTag").css("display", "none");
 //
-//        if(g_currentTranformationOperationState == g_TransformationOperation.ROTATE){
+//        if(g_currentTranformationOperationState == enum_TransformationOperation.ROTATE){
 //            g_savedRotation = g_rotation;
-//        }else if(g_currentTranformationOperationState == g_TransformationOperation.TRANSPOSE) {
+//        }else if(g_currentTranformationOperationState == enum_TransformationOperation.TRANSPOSE) {
 //            g_savedTranspose = {
 //                x: g_savedTranspose.x + g_currentTranspose.x,
 //                y: g_savedTranspose.y + g_currentTranspose.y
@@ -240,9 +239,9 @@
 //                x: 0,
 //                y: 0
 //            };
-//        }else if(g_currentTranformationOperationState == g_TransformationOperation.CROP) {
+//        }else if(g_currentTranformationOperationState == enum_TransformationOperation.CROP) {
 //
-//        }else if(g_currentTranformationOperationState == g_TransformationOperation.SCALE) {
+//        }else if(g_currentTranformationOperationState == enum_TransformationOperation.SCALE) {
 //            g_savedScale = g_scale;
 //            g_savedScaleDirection = g_currentScaleDirection;
 //        }
@@ -251,10 +250,10 @@
 //isDown = false;
 //
 //function setDefaultParameters() {
-//    g_currentTranformationOperationState = g_TransformationOperation.TRANSPOSE;
+//    g_currentTranformationOperationState = enum_TransformationOperation.TRANSPOSE;
 //    g_savedTranspose= {x: 512/2, y: 512/2};
 //    g_genKeypoints = generateRandomKeypoints({x: 512, y: 512}, g_numberOfKeypointsToGenerate);
-//    setCurrnetOperation(g_TransformationOperation.TRANSPOSE);
+//    setCurrnetOperation(enum_TransformationOperation.TRANSPOSE);
 //}
 //
 //window.onload = function() {
@@ -287,7 +286,7 @@
 //    //fill
 //    ctx.fillStyle = "#f2f2f2";
 //    ctx.fillStyle = 'rgba(255, 255, 255, 1.0)';
-//    if(isDown && g_currentTranformationOperationState == g_TransformationOperation.CROP){
+//    if(isDown && g_currentTranformationOperationState == enum_TransformationOperation.CROP){
 //        ctx.fillStyle = 'rgba(242, 242, 242, 0.3)';
 //    }
 //    ctx.mozFillRule = 'evenodd'; //for old firefox 1~30
@@ -715,8 +714,8 @@
 //
 //function drawLine(inMouseDownPoint, inMouseCurrentPoint) {
 //
-//    if (g_currentTranformationOperationState == g_TransformationOperation.ROTATE
-//        || g_currentTranformationOperationState == g_TransformationOperation.SCALE) {
+//    if (g_currentTranformationOperationState == enum_TransformationOperation.ROTATE
+//        || g_currentTranformationOperationState == enum_TransformationOperation.SCALE) {
 //        //continue
 //    }else{
 //        return;
