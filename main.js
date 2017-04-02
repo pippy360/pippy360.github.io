@@ -7,6 +7,16 @@
 // #     # #      #    # #    # #    # #           # #   #    # #   #  #    #
 //  #####  ######  ####  #####  #    # ######       #    #    # #    #  ####
 
+var g_dogImage = new Image();
+
+function getBackgroundImage() {
+    return g_dogImage;
+}
+
+function getCroppingPoints() {
+    return [];
+}
+
 function getKeypoints() {
     //lazy init the keypoints
     //call loadKeypoints
@@ -152,82 +162,66 @@ function computeTransformedKeypoints(keypoints, transformations) {
 // #####   #    # #    # #    #
 
 
-function drawBackgroupImageWithTransformations() {
+function drawBackgroupImageWithTransformations(canvasContext, image, transformations) {
 
-    ctx.save();
-
-    ctx.translate(g_transpose.x, g_transpose.y);
-    ctx.rotate(g_rotation * Math.PI/180.0 * -1.0);
-    ctx.rotate(g_currentScaleDirection * Math.PI/180.0 * -1.0);
-    ctx.scale(Math.sqrt(g_currentScale), 1.0/Math.sqrt(g_scale));
-    ctx.rotate(g_currentScaleDirection * Math.PI/180.0);
+    // ctx.save();
+    //
+    // ctx.translate(g_transpose.x, g_transpose.y);
+    // ctx.rotate(g_rotation * Math.PI/180.0 * -1.0);
+    // ctx.rotate(g_currentScaleDirection * Math.PI/180.0 * -1.0);
+    // ctx.scale(Math.sqrt(g_currentScale), 1.0/Math.sqrt(g_scale));
+    // ctx.rotate(g_currentScaleDirection * Math.PI/180.0);
 //    ctx.rotate(g_savedScaleDirection * Math.PI/180.0 * -1.0);
 //    ctx.scale(Math.sqrt(g_savedScale), 1.0/Math.sqrt(g_scale));
 //    ctx.rotate(g_savedScaleDirection * Math.PI/180.0);
 //    ctx.translate(sun.width/2, sun.width/2);
-    ctx.drawImage(sun, -sun.width/2, -sun.height/2);
-
+    canvasContext.drawImage(image, -image.width/2, -image.height/2);
 }
 
 
-function drawBackgroupImage(canvasContext, transformations) {
-
-    canvasContext.drawImage(sun, 0, 0);
-    canvasContext.clearRect(0, 0, 512, 512); // clear canvas
-
+function drawBackgroupImage(canvasContext, image) {
+    canvasContext.drawImage(image, 0, 0);
 }
 
 
 function drawLineFromPointToMousePosition(ctx) {
-    ctx.save();
-
-    if (isDown) {
-        drawLine(mouseDownPoint, mouseCurrentPoint);
-    }
-
-    ctx.restore();
+    // ctx.save();
+    // drawLine(mouseDownPoint, mouseCurrentPoint);
+    // ctx.restore();
 }
 
 function drawKeypointsWithTransformation(interactiveCanvasContext, keypoints, interactiveImageTransformations) {
 
 }
 
-function drawTriangles() {
-    //now draw the keypoints
-    var newKeypoints = getNewKeypoints(g_genKeypoints, g_scale, g_rotation, g_scaleDirection, g_transpose, {x: 0, y: 0}, {x: 512, y: 512});
+function computeTriangles(filteredKeypoints) {
+    return [];
+}
 
-    var transformedPolyPoints = getTransformedPolyPoints(g_coords, g_scale, g_rotation, g_scaleDirection, g_transpose, {x: 0, y: 0}, {x: 512, y: 512});
-    drawClosingPolygon(ctx, transformedPolyPoints);
+function drawTriangles(canvasContext, keypoints, transformationMatrix) {
 
-    if(g_shouldDrawTriangles){
-        var tempFilteredKeypointsStep = filterBasedOnVisible(newKeypoints, {x: 512, y: 512});//input is canvas/imageCutout size
-        var filteredKeypoints = filterBasedOnClosingPoly(tempFilteredKeypointsStep, transformedPolyPoints);//input is canvas/imageCutout size
-
-        var triangles = getTheTriangles(filteredKeypoints);
-        $("#number_of_triangles_output").html("Number of triangles: " + triangles.length);
-        for (var i = 0; i < triangles.length; i++) {
-            var tri = triangles[i];
-            var transMat = getTransformationMatrix(g_scale, g_rotation, g_transpose, g_scaleDirection, {x: 0, y: 0}, {x: 512, y: 512});
-            var convertToOriginalImageMat = math.inv(transMat);
-            drawTriangleWithTransformationMatrix(ctx2, tri, convertToOriginalImageMat);
-            drawTriangle(ctx, tri);
-            //do the translation map
-            //draw the next triangle
-        }
-
-        for (var i = 0; i < filteredKeypoints.length; i++)
-        {
-            var kp = filteredKeypoints[i];
-//            ctx.fillStyle = 'rgba(255, 0, 0, 1.0)';
-//            ctx.fillRect(kp.x+2,kp.y+2,4,4);
-//            ctx.fillStyle = 'rgba(0, 0, 255, 0.5)';
-//            ctx.fillRect(kp.x,kp.y,4,4);
-        }
+    var triangles = computeTriangles(keypoints);
+    for (var i = 0; i < triangles.length; i++) {
+        // var tri = triangles[i];
+        // var transMat = getTransformationMatrix(g_scale, g_rotation, g_transpose, g_scaleDirection, {x: 0, y: 0}, {x: 512, y: 512});
+        // var convertToOriginalImageMat = math.inv(transMat);
+        // drawTriangleWithTransformationMatrix(ctx2, tri, convertToOriginalImageMat);
+        // drawTriangle(ctx, tri);
+        //do the translation map
+        //draw the next triangle
     }
 }
 
 function drawCroppingPoints() {
+    // var transformedPolyPoints = getTransformedPolyPoints(g, g_scale, g_rotation, g_scaleDirection, g_transpose, {x: 0, y: 0}, {x: 512, y: 512});
+    // drawClosingPolygon(ctx, transformedPolyPoints);
 
+}
+
+function getVisableKeypoints() {
+    // var tempFilteredKeypointsStep = filterBasedOnVisible(newKeypoints, {x: 512, y: 512});//input is canvas/imageCutout size
+    // filterBasedOnClosingPoly(tempFilteredKeypointsStep, transformedPolyPoints);//input is canvas/imageCutout size
+    return [];
 }
 
 function draw() {
@@ -235,18 +229,22 @@ function draw() {
     //init variables
     var interactiveCanvasContext = document.getElementById('interactiveCanvas').getContext('2d');
     var referenceCanvasContext = document.getElementById('referenceCanvas').getContext('2d');
-    var keypoints = getKeypoints();
+    var filteredKeypoints = getVisableKeypoints();
     var croppingPoints = getCroppingPoints();
     var interactiveImageTransformations = getInteractiveImageTransformations();
 
-    drawBackgroupImageWithTransformations(interactiveCanvasContext, interactiveImageTransformations);
-    drawBackgroupImage(referenceCanvasContext);
+    interactiveCanvasContext.clearRect(0, 0, 512, 512); // clear canvas
+    referenceCanvasContext.clearRect(0, 0, 512, 512); // clear canvas
 
-    drawKeypointsWithTransformation(interactiveCanvasContext, keypoints, interactiveImageTransformations);
-    drawKeypointsWithTransformation(referenceCanvasContext, keypoints, getIdentityMatrix());
+    drawBackgroupImageWithTransformations(interactiveCanvasContext, getBackgroundImage(), interactiveImageTransformations);
+    drawBackgroupImage(referenceCanvasContext, getBackgroundImage());
 
-    drawTriangles(interactiveCanvasContext, keypoints, interactiveImageTransformations);
-    drawTriangles(referenceCanvasContext, keypoints, getIdentityMatrix());
+    drawKeypointsWithTransformation(interactiveCanvasContext, filteredKeypoints, interactiveImageTransformations);
+    drawKeypointsWithTransformation(referenceCanvasContext, filteredKeypoints, getIdentityMatrix());
+
+
+    drawTriangles(interactiveCanvasContext, filteredKeypoints, interactiveImageTransformations);
+    drawTriangles(referenceCanvasContext, filteredKeypoints, getIdentityMatrix());
 
     drawCroppingPoints(croppingPoints);
 
@@ -254,3 +252,11 @@ function draw() {
 
     window.requestAnimationFrame(draw);
 }
+
+function init() {
+   g_dogImage.src = 'dog1_resize.jpg';
+   window.requestAnimationFrame(draw);
+}
+
+init();
+
