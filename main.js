@@ -50,6 +50,10 @@ function getTransformationChanges() {
 }
 
 var g_interactiveImageTransformation = {
+    rotationCenterPoint: {
+        x: 512/2,
+        y: 512/2
+    },
     scale: 1,
     scaleDirection: 0,
     rotation: 0,
@@ -143,9 +147,19 @@ function convertKeypointsToMatrixKeypoint(keypoints) {
 }
 
 function convertTransformationObjectToTransformationMatrix(transformations) {
+    var rotationCenterPoint = transformations.rotationCenterPoint;
     var ret = getIdentityMatrix();
-    ret = matrixMultiply(ret, getTranslateMatrix(100, 100));
-    ret = matrixMultiply(ret, getRotatoinMatrix(transformations.rotation));
+    ret = matrixMultiply(ret, getTranslateMatrix(rotationCenterPoint.x, rotationCenterPoint.y));
+
+    ret = matrixMultiply(ret, getRotatoinMatrix(-transformations.scaleDirection));
+    ret = matrixMultiply(ret, getScaleMatrix(Math.sqrt(transformations.scale), 1/Math.sqrt(transformations.scale)));
+    ret = matrixMultiply(ret, getRotatoinMatrix(transformations.scaleDirection));
+
+    //rotate
+    ret = matrixMultiply(ret, getRotatoinMatrix(-transformations.rotation));
+    ret = matrixMultiply(ret, getTranslateMatrix(-rotationCenterPoint.x, -rotationCenterPoint.y));
+    ret = matrixMultiply(ret, getTranslateMatrix(-transformations.translate.x, -transformations.translate.y));
+
     return ret;
 }
 
@@ -265,12 +279,15 @@ function drawLineFromPointToMousePosition(ctx) {
 
 function drawKeypointsWithTransformation(interactiveCanvasContext, keypoints, interactiveImageTransformations) {
     var transformedKeypoints = computeTransformedKeypoints(keypoints, interactiveImageTransformations);
+    interactiveCanvasContext.beginPath();
+    interactiveCanvasContext.strokeStyle="red";
     for(var i=0; i < transformedKeypoints.length; i++)
     {
         var currentKeypoint = transformedKeypoints[i];
         interactiveCanvasContext.rect(currentKeypoint.x,currentKeypoint.y,3,3);
-        interactiveCanvasContext.stroke();
     }
+    interactiveCanvasContext.closePath();
+    interactiveCanvasContext.stroke();
 }
 
 function computeTriangles(filteredKeypoints) {
@@ -314,6 +331,7 @@ function applyChangesToTransformations(interactiveImageTransformations, transfor
     var savedScaleDirection = interactiveImageTransformations.scaleDirection;
     var currentScaleDirection = transformationChanges.currentScaleDirection;
     return {
+        rotationCenterPoint: interactiveImageTransformations.rotationCenterPoint,
         scale: savedScale*currentScale,
         scaleDirection: currentScaleDirection + savedScaleDirection,
         rotation: currentRotation + savedRotation,
@@ -571,7 +589,7 @@ function setCurrnetOperation(newState) {
 }
 
 function init() {
-    g_keypoints = generateRandomKeypoints({x: 512, y: 512}, 20);
+    g_keypoints = generateRandomKeypoints({x: 512, y: 512}, 5);
     wipeTransformationChanges();
     setCurrnetOperation(enum_TransformationOperation.TRANSLATE);
     g_dogImage.src = 'dog1_resize.jpg';
