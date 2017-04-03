@@ -156,18 +156,19 @@ function convertTransformationObjectToTransformationMatrix(transformations) {
     var rotationCenterPoint = transformations.rotationCenterPoint;
     var ret = getIdentityMatrix();
 
-    ret = matrixMultiply(ret, getTranslateMatrix(-rotationCenterPoint.x, -rotationCenterPoint.y));
-
-    //Scale
-    ret = matrixMultiply(ret, transformations.directionalScaleMatrix);
-
-    //Rotate
-    ret = matrixMultiply(ret, getRotatoinMatrix(-transformations.rotation));
 
     //Translate
     ret = matrixMultiply(ret, getTranslateMatrix(-transformations.translate.x, -transformations.translate.y));
 
+    //Scale
     ret = matrixMultiply(ret, getTranslateMatrix(rotationCenterPoint.x, rotationCenterPoint.y));
+    ret = matrixMultiply(ret, transformations.directionalScaleMatrix);
+    ret = matrixMultiply(ret, getTranslateMatrix(-rotationCenterPoint.x, -rotationCenterPoint.y));
+
+    //Rotate
+    ret = matrixMultiply(ret, getTranslateMatrix(rotationCenterPoint.x, rotationCenterPoint.y));
+    ret = matrixMultiply(ret, getRotatoinMatrix(-transformations.rotation));
+    ret = matrixMultiply(ret, getTranslateMatrix(-rotationCenterPoint.x, -rotationCenterPoint.y));
 
     return ret;
 }
@@ -258,17 +259,22 @@ function drawBackgroupImageWithTransformations(canvasContext, image, transformat
     canvasContext.save();
 
     //Center image
-    canvasContext.translate(canvasContext.canvas.width / 2, canvasContext.canvas.height / 2);
 
     var translation = transformations.translate;
     canvasContext.translate(-translation.x, -translation.y);
 
-    canvasContext.rotate(transformations.rotation * Math.PI / 180.0 * -1.0);
-
     //scale in a given direction
+    canvasContext.translate(transformations.rotationCenterPoint.x, transformations.rotationCenterPoint.y);
     var mat = transformations.directionalScaleMatrix;
     canvasContext.transform(mat[0][0], mat[1][0], mat[0][1], mat[1][1], mat[0][2], mat[1][2]);
+    canvasContext.translate(-transformations.rotationCenterPoint.x, -transformations.rotationCenterPoint.y);
 
+    //rotate around center point
+    canvasContext.translate(transformations.rotationCenterPoint.x, transformations.rotationCenterPoint.y);
+    canvasContext.rotate(transformations.rotation * Math.PI / 180.0 * -1.0);
+    canvasContext.translate(-transformations.rotationCenterPoint.x, -transformations.rotationCenterPoint.y);
+
+    canvasContext.translate(canvasContext.canvas.width / 2, canvasContext.canvas.height / 2);
     canvasContext.drawImage(image, -image.width / 2, -image.height / 2);
 
     canvasContext.restore();
@@ -364,8 +370,6 @@ function draw() {
     if (g_isMouseDownAndClickedOnCanvas) {
         transformations = applyChangesToTransformations(interactiveImageTransformations, transformationChanges);
     }
-
-
 
     drawBackgroupImageWithTransformations(interactiveCanvasContext, getBackgroundImage(), transformations);
     // drawBackgroupImage(referenceCanvasContext, getBackgroundImage());
