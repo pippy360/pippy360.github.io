@@ -31,8 +31,7 @@ var g_transformationChanges;//TODO: rename to something better
 
 function wipeTransformationChanges() {
     g_transformationChanges = {
-        currentScale: 1,
-        currentScaleDirection: 0,
+        currentDirectionalScaleMatrix: getIdentityMatrix(),
         currentRotation: 0,
         currentTranslate: {
             x: 0,
@@ -54,8 +53,7 @@ var g_interactiveImageTransformation = {
         x: 512/2,
         y: 512/2
     },
-    scale: 1,
-    scaleDirection: 0,
+    directionalScaleMatrix: getIdentityMatrix(),
     rotation: 0,
     translate: {
         x: 0,
@@ -88,6 +86,14 @@ function getArea(tri) {
 
 function getScaleMatrix(scaleX, scaleY) {
     return [[scaleX, 0, 0], [0, scaleY, 0], [0, 0, 1]];
+}
+
+function getDirectionalScaleMatrix(scaleX, scaleY, direction) {
+    var ret = getIdentityMatrix();
+    ret = matrixMultiply(ret, getRotatoinMatrix(direction));
+    ret = matrixMultiply(ret, getScaleMatrix(scaleX, scaleY));
+    ret = matrixMultiply(ret, getRotatoinMatrix(-direction));
+    return ret;
 }
 
 function getRotatoinMatrix(inRotation) {
@@ -149,16 +155,19 @@ function convertKeypointsToMatrixKeypoint(keypoints) {
 function convertTransformationObjectToTransformationMatrix(transformations) {
     var rotationCenterPoint = transformations.rotationCenterPoint;
     var ret = getIdentityMatrix();
-    ret = matrixMultiply(ret, getTranslateMatrix(rotationCenterPoint.x, rotationCenterPoint.y));
 
-    ret = matrixMultiply(ret, getRotatoinMatrix(-transformations.scaleDirection));
-    ret = matrixMultiply(ret, getScaleMatrix(Math.sqrt(transformations.scale), 1/Math.sqrt(transformations.scale)));
-    ret = matrixMultiply(ret, getRotatoinMatrix(transformations.scaleDirection));
-
-    //rotate
-    ret = matrixMultiply(ret, getRotatoinMatrix(-transformations.rotation));
     ret = matrixMultiply(ret, getTranslateMatrix(-rotationCenterPoint.x, -rotationCenterPoint.y));
+
+    //Scale
+    ret = matrixMultiply(ret, transformations.directionalScaleMatrix);
+
+    //Rotate
+    ret = matrixMultiply(ret, getRotatoinMatrix(-transformations.rotation));
+
+    //Translate
     ret = matrixMultiply(ret, getTranslateMatrix(-transformations.translate.x, -transformations.translate.y));
+
+    ret = matrixMultiply(ret, getTranslateMatrix(rotationCenterPoint.x, rotationCenterPoint.y));
 
     return ret;
 }
@@ -256,9 +265,9 @@ function drawBackgroupImageWithTransformations(canvasContext, image, transformat
 
     canvasContext.rotate(transformations.rotation * Math.PI / 180.0 * -1.0);
 
-    canvasContext.rotate(transformations.scaleDirection * Math.PI / 180.0 * -1.0);
-    canvasContext.scale(Math.sqrt(transformations.scale), 1.0 / Math.sqrt(transformations.scale));
-    canvasContext.rotate(transformations.scaleDirection * Math.PI / 180.0);
+    //scale in a given direction
+    var mat = transformations.directionalScaleMatrix;
+    canvasContext.transform(mat[0][0], mat[1][0], mat[0][1], mat[1][1], mat[0][2], mat[1][2]);
 
     canvasContext.drawImage(image, -image.width / 2, -image.height / 2);
 
@@ -326,14 +335,11 @@ function applyChangesToTransformations(interactiveImageTransformations, transfor
     var translateChange = transformationChanges.currentTranslate;
     var savedRotation = interactiveImageTransformations.rotation;
     var currentRotation = transformationChanges.currentRotation;
-    var savedScale = interactiveImageTransformations.scale;
-    var currentScale = transformationChanges.currentScale;
-    var savedScaleDirection = interactiveImageTransformations.scaleDirection;
-    var currentScaleDirection = transformationChanges.currentScaleDirection;
+    var savedScaleMatrix = interactiveImageTransformations.directionalScaleMatrix;
+    var currentScaleMatrix = transformationChanges.currentDirectionalScaleMatrix;
     return {
         rotationCenterPoint: interactiveImageTransformations.rotationCenterPoint,
-        scale: savedScale*currentScale,
-        scaleDirection: currentScaleDirection + savedScaleDirection,
+        directionalScaleMatrix: matrixMultiply(savedScaleMatrix, currentScaleMatrix),
         rotation: currentRotation + savedRotation,
         translate: {
             x: translateSaved.x + translateChange.x,
@@ -343,7 +349,6 @@ function applyChangesToTransformations(interactiveImageTransformations, transfor
 }
 
 function draw() {
-
     //init variables
     var interactiveCanvasContext = document.getElementById('interactiveCanvas').getContext('2d');
     var referenceCanvasContext = document.getElementById('referenceCanvas').getContext('2d');
@@ -355,9 +360,12 @@ function draw() {
     referenceCanvasContext.clearRect(0, 0, 512, 512); // clear canvas
 
     var transformations = interactiveImageTransformations;
+    var scaleMatrix;
     if (g_isMouseDownAndClickedOnCanvas) {
         transformations = applyChangesToTransformations(interactiveImageTransformations, transformationChanges);
     }
+
+
 
     drawBackgroupImageWithTransformations(interactiveCanvasContext, getBackgroundImage(), transformations);
     // drawBackgroupImage(referenceCanvasContext, getBackgroundImage());
@@ -435,10 +443,9 @@ function handleMouseUpTranslate(pageMousePosition) {
 }
 
 function handleMouseUpScale() {
-    var savedScale = g_interactiveImageTransformation.scale;
-    g_interactiveImageTransformation.scale = savedScale * g_transformationChanges.currentScale;
-    var savedScaleDirection = g_interactiveImageTransformation.scaleDirection;
-    g_interactiveImageTransformation.scaleDirection = savedScaleDirection + g_transformationChanges.currentScaleDirection;
+    var savedScaleMatrix = g_interactiveImageTransformation.directionalScaleMatrix;
+    var tempScaleMatrix = matrixMultiply(savedScaleMatrix, g_transformationChanges.currentDirectionalScaleMatrix);
+    g_interactiveImageTransformation.directionalScaleMatrix = tempScaleMatrix;
 }
 
 function handleMouseUpRotate() {
@@ -490,10 +497,11 @@ function handleMouseMoveScale(pageMousePosition) {
     if (extraRotation < 0) {
         extraRotation = (360 + (extraRotation));
     }
-    extraRotation = extraRotation % 360;
-    g_transformationChanges.currentScaleDirection = extraRotation;
-    g_transformationChanges.currentScale = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
-    g_transformationChanges.currentScale /= 100;
+    direction = extraRotation % 360;
+    scale = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
+    scale /= 100;
+    scaleMatrix = getDirectionalScaleMatrix(Math.sqrt(scale), 1/Math.sqrt(scale), -direction);
+    g_transformationChanges.currentDirectionalScaleMatrix = scaleMatrix;
 }
 
 function handleMouseMoveRotate(pageMousePosition) {
