@@ -263,26 +263,30 @@ function generateRandomKeypoints(imageSize, numberOfKeypoints) {
     return ret;
 }
 
-function applyTransformationMatToSingleTriangle(triangle, transformations) {
-    var convertedTransformations = convertTransformationObjectToTransformationMatrix(transformations);
+function applyTransformationMatToSingleTriangle(triangle, transformationMatrix) {
     var transformedTriangle = [];
     for (var i = 0; i < triangle.length; i++) {
         var tempKeypoint1 = convertSingleKeypointToMatrix(triangle[i]);
-        var tempKeypoint2 = applyTransformationMatToSingleKeypoint(tempKeypoint1, convertedTransformations);
+        var tempKeypoint2 = applyTransformationMatToSingleKeypoint(tempKeypoint1, transformationMatrix);
         var tempKeypoint3 = convertSingleMatrixKeypoinToKeypointObject(tempKeypoint2);
         transformedTriangle.push(tempKeypoint3);
     }
     return transformedTriangle;
 }
 
-function computeTransformedTriangles(triangles, transformations) {
+function computeTransformedTrianglesWithMatrix(triangles, transformationMatrix) {
     var ret = [];
     for (var i = 0; i < triangles.length; i++) {
         var currentTriangle = triangles[i];
-        var temp = applyTransformationMatToSingleTriangle(currentTriangle, transformations);
+        var temp = applyTransformationMatToSingleTriangle(currentTriangle, transformationMatrix);
         ret.push(temp);
     }
     return ret;
+}
+
+function computeTransformedTriangles(triangles, transformations) {
+    var convertedTransformations = convertTransformationObjectToTransformationMatrix(transformations);
+    return computeTransformedTrianglesWithMatrix(triangles, convertedTransformations);
 }
 
 function getEuclideanDistance(point1, point2) {
@@ -605,23 +609,26 @@ function draw() {
     drawBackgroupImage(referenceCanvasContext, getBackgroundImage());
     var keypoints = getKeypoints();
     var transformedKeypoints = computeTransformedKeypoints(keypoints, transformations);
-    var filteredKeypoints = getVisableKeypoints(transformedKeypoints, {x: 512, y: 512}, croppingPoints);
+
+    var transformedCroppingPoints1 = getTransformedCroppingPointsMatrix(croppingPoints, getCroppingPointsTransformationMatrix());
+    var transformedCroppingPoints2 = getTransformedCroppingPoints(transformedCroppingPoints1, transformations);
+
+    var filteredKeypoints = getVisableKeypoints(transformedKeypoints, {x: 512, y: 512}, transformedCroppingPoints2);
 
     //draw reference image keypoints and triangles
     drawKeypoints(referenceCanvasContext, keypoints);
     var triangles = computeTriangles(filteredKeypoints);
-    var trianglesProjectedOntoReferenceCanvas = triangles;//computeTransformedTriangles(triangles, );
+    var transformationMatrix = convertTransformationObjectToTransformationMatrix(transformations);
+    var trianglesProjectedOntoReferenceCanvas = computeTransformedTrianglesWithMatrix(triangles, math.inv(transformationMatrix));
     drawTriangles(referenceCanvasContext, trianglesProjectedOntoReferenceCanvas);
 
     //draw interactive image keypoints and triangles
     drawKeypoints(interactiveCanvasContext, filteredKeypoints);
     drawTriangles(interactiveCanvasContext, triangles);
 
-    var transformedCroppingPoints1 = getTransformedCroppingPointsMatrix(croppingPoints, getCroppingPointsTransformationMatrix());
-    var transformedCroppingPoints2 = getTransformedCroppingPoints(transformedCroppingPoints1, transformations);
     drawCroppingPoints(interactiveCanvasContext, transformedCroppingPoints2);
 
-    drawLineFromPointToMousePosition(referenceCanvasContext);
+    //drawLineFromPointToMousePosition(referenceCanvasContext);
 
     window.requestAnimationFrame(draw);
 }
