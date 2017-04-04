@@ -5,6 +5,12 @@
 // #     # #      #    # #    # ###### #          #   #  ###### #####       #
 // #     # #      #    # #    # #    # #           # #   #    # #   #  #    #
 //  #####  ######  ####  #####  #    # ######       #    #    # #    #  ####
+//global vars
+
+var g_maxPntDist = 6000;
+var g_minPntDist = 50;
+var g_minTriArea = 100;//11000;
+//var g_maxTriArea = 21000;
 
 var g_isMouseDownAndClickedOnCanvas = false;
 
@@ -25,8 +31,9 @@ function getBackgroundImage() {
 }
 
 function getCroppingPoints() {
-    return [];
+    return g_croppingPolygonPoints;
 }
+
 var g_transformationChanges;//TODO: rename to something better
 
 function wipeTransformationChanges() {
@@ -50,8 +57,8 @@ function getTransformationChanges() {
 
 var g_interactiveImageTransformation = {
     rotationCenterPoint: {
-        x: 512/2,
-        y: 512/2
+        x: 512 / 2,
+        y: 512 / 2
     },
     directionalScaleMatrix: getIdentityMatrix(),
     rotation: 0,
@@ -63,6 +70,10 @@ var g_interactiveImageTransformation = {
 
 function getInteractiveImageTransformations() {
     return g_interactiveImageTransformation;
+}
+
+function getKeypoints() {
+    return g_keypoints;
 }
 
 // #     #
@@ -186,15 +197,17 @@ function applyTransformationMatrixToAllKeypoints(keypoints, transformationMat) {
     return ret;
 }
 
-function convertMatrixKeypoinToKeypointObjects(keypoints) {
+function convertSingleMatrixKeypoinToKeypointObject(arrayKeypoint) {
+    return {
+        x: (arrayKeypoint[0][0] == undefined) ? arrayKeypoint[0] : arrayKeypoint[0][0],
+        y: (arrayKeypoint[1][0] == undefined) ? arrayKeypoint[1] : arrayKeypoint[1][0],
+    };
+}
+
+function convertMatrixKeypointsToKeypointObjects(keypoints) {
     var ret = [];
     for (var i = 0; i < keypoints.length; i++) {
-        var arrayKeypoint = keypoints[i];
-        var tempKeypoint = {
-            x: arrayKeypoint[0][0],
-            y: arrayKeypoint[1][0]
-        };
-        ret.push(tempKeypoint)
+        ret.push(convertSingleMatrixKeypoinToKeypointObject(keypoints[i]))
     }
     return ret;
 }
@@ -210,7 +223,7 @@ function computeTransformedKeypoints(keypoints, transformations) {
     var finalArrayKeypoints = applyTransformationMatrixToAllKeypoints(newKeypoints, transformationMat);
 
     //convert back to keypoint objects
-    var finalKeypoints = convertMatrixKeypoinToKeypointObjects(finalArrayKeypoints);
+    var finalKeypoints = convertMatrixKeypointsToKeypointObjects(finalArrayKeypoints);
 
     return finalKeypoints;
 }
@@ -231,18 +244,131 @@ function minusTwoPoints(point1, point2) {
 
 function generateRandomKeypoints(imageSize, numberOfKeypoints) {
 
-   var ret = [];
-   for (var i = 0; i < numberOfKeypoints; i++) {
+    var ret = [];
+    for (var i = 0; i < numberOfKeypoints; i++) {
 
-       var x = Math.floor((Math.random() * imageSize.x));
-       var y = Math.floor((Math.random() * imageSize.y));
-       var kp = {
-           x: x,
-           y: y
-       };
-       ret.push(kp)
-   }
-   return ret;
+        var x = Math.floor((Math.random() * imageSize.x));
+        var y = Math.floor((Math.random() * imageSize.y));
+        var kp = {
+            x: x,
+            y: y
+        };
+        ret.push(kp)
+    }
+    return ret;
+}
+
+function applyTransformationMatToSingleTriangle(triangle, transformations) {
+    var convertedTransformations = convertTransformationObjectToTransformationMatrix(transformations);
+    var transformedTriangle = [];
+    for (var i = 0; i < triangle.length; i++) {
+        var tempKeypoint1 = convertSingleKeypointToMatrix(triangle[i]);
+        var tempKeypoint2 = applyTransformationMatToSingleKeypoint(tempKeypoint1, convertedTransformations);
+        var tempKeypoint3 = convertSingleMatrixKeypoinToKeypointObject(tempKeypoint2);
+        transformedTriangle.push(tempKeypoint3);
+    }
+    return transformedTriangle;
+}
+
+function computeTransformedTriangles(triangles, transformations) {
+    var ret = [];
+    for (var i = 0; i < triangles.length; i++) {
+        var currentTriangle = triangles[i];
+        var temp = applyTransformationMatToSingleTriangle(currentTriangle, transformations);
+        ret.push(temp);
+    }
+    return ret;
+}
+
+function getEuclideanDistance(point1, point2) {
+    var a = point1.x - point2.x;
+    var b = point1.y - point2.y;
+
+    return Math.sqrt(a * a + b * b);
+}
+
+function filterValidPoints(headPoint, tailcombs) {
+    var ret = [];
+    for (var i = 0; i < tailcombs.length; i++) {
+        var currPt = tailcombs[i];
+        if (getEuclideanDistance(currPt, headPoint) < g_maxPntDist && getEuclideanDistance(currPt, headPoint) > g_minPntDist) {
+            ret.push([currPt]);
+        }
+    }
+    return ret;
+}
+
+function computeTriangles(inKeypoints) {
+    var ret = [];
+    for (var i = 0; i < inKeypoints.length - 2; i++) {
+        var keypoint = inKeypoints[i];
+        var tail = inKeypoints.slice(i + 1);
+        var subsetOfValidPoints = filterValidPoints(keypoint, tail);
+        var combs = k_combinations(subsetOfValidPoints, 2);
+        for (var j = 0; j < combs.length; j++) {
+            var currComb = combs[j];
+            var tempTriangle = [keypoint, currComb[0][0], currComb[1][0]];
+            ret.push(tempTriangle);
+        }
+    }
+    return ret;
+}
+
+function k_combinations(set, k) {
+    var i, j, combs, head, tailcombs;
+
+    // There is no way to take e.g. sets of 5 elements from
+    // a set of 4.
+    if (k > set.length || k <= 0) {
+        return [];
+    }
+
+    // K-sized set has only one K-sized subset.
+    if (k == set.length) {
+        return [set];
+    }
+
+    // There is N 1-sized subsets in a N-sized set.
+    if (k == 1) {
+        combs = [];
+        for (i = 0; i < set.length; i++) {
+            combs.push([set[i]]);
+        }
+        return combs;
+    }
+
+    // Assert {1 < k < set.length}
+
+    // Algorithm description:
+    // To get k-combinations of a set, we want to join each element
+    // with all (k-1)-combinations of the other elements. The set of
+    // these k-sized sets would be the desired result. However, as we
+    // represent sets with lists, we need to take duplicates into
+    // account. To avoid producing duplicates and also unnecessary
+    // computing, we use the following approach: each element i
+    // divides the list into three: the preceding elements, the
+    // current element i, and the subsequent elements. For the first
+    // element, the list of preceding elements is empty. For element i,
+    // we compute the (k-1)-computations of the subsequent elements,
+    // join each with the element i, and store the joined to the set of
+    // computed k-combinations. We do not need to take the preceding
+    // elements into account, because they have already been the i:th
+    // element so they are already computed and stored. When the length
+    // of the subsequent list drops below (k-1), we cannot find any
+    // (k-1)-combs, hence the upper limit for the iteration:
+    combs = [];
+    for (i = 0; i < set.length - k + 1; i++) {
+        // head is a list that includes only our current element.
+        head = set.slice(i, i + 1);
+        // We take smaller combinations from the subsequent elements
+        tailcombs = k_combinations(set.slice(i + 1), k - 1);
+        // For each (k-1)-combination we join it with the current
+        // and store it to the set of k-combinations.
+        for (j = 0; j < tailcombs.length; j++) {
+            combs.push(head.concat(tailcombs[j]));
+        }
+    }
+    return combs;
 }
 
 // #####
@@ -292,47 +418,130 @@ function drawLineFromPointToMousePosition(ctx) {
     // ctx.restore();
 }
 
-function drawKeypointsWithTransformation(interactiveCanvasContext, keypoints, interactiveImageTransformations) {
-    var transformedKeypoints = computeTransformedKeypoints(keypoints, interactiveImageTransformations);
+function drawTriangleWithColour(ctx, tri, colour) {
+    var alpha = 0.9;
+    ctx.strokeStyle = 'rgba(' + colour[0] + ', ' + colour[1] + ' ,' + colour[2] + ', ' + alpha + ')';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+    ctx.beginPath();
+    ctx.moveTo(tri[0].x, tri[0].y);
+    ctx.lineTo(tri[1].x, tri[1].y);
+    ctx.lineTo(tri[2].x, tri[2].y);
+    ctx.closePath();
+    ctx.stroke();
+}
+
+function drawKeypoints(interactiveCanvasContext, keypoints) {
     interactiveCanvasContext.beginPath();
-    interactiveCanvasContext.strokeStyle="red";
-    for(var i=0; i < transformedKeypoints.length; i++)
-    {
-        var currentKeypoint = transformedKeypoints[i];
-        interactiveCanvasContext.rect(currentKeypoint.x,currentKeypoint.y,3,3);
+    interactiveCanvasContext.strokeStyle = "red";
+    for (var i = 0; i < keypoints.length; i++) {
+        var currentKeypoint = keypoints[i];
+        interactiveCanvasContext.rect(currentKeypoint.x, currentKeypoint.y, 3, 3);
     }
     interactiveCanvasContext.closePath();
     interactiveCanvasContext.stroke();
 }
 
-function computeTriangles(filteredKeypoints) {
-    return [];
+function drawTriangle(ctx, tri) {
+    drawTriangleWithColour(ctx, tri, [255, 255, 0]);
 }
 
-function drawTriangles(canvasContext, keypoints, transformationMatrix) {
-
-    var triangles = computeTriangles(keypoints);
+function drawTriangles(canvasContext, triangles) {
     for (var i = 0; i < triangles.length; i++) {
-        // var tri = triangles[i];
-        // var transMat = getTransformationMatrix(g_scale, g_rotation, g_translate, g_scaleDirection, {x: 0, y: 0}, {x: 512, y: 512});
-        // var convertToOriginalImageMat = math.inv(transMat);
-        // drawTriangleWithTransformationMatrix(ctx2, tri, convertToOriginalImageMat);
-        // drawTriangle(ctx, tri);
-        //do the translation map
-        //draw the next triangle
+        drawTriangle(canvasContext, triangles[i]);
     }
 }
 
-function drawCroppingPoints() {
-    // var transformedPolyPoints = getTransformedPolyPoints(g, g_scale, g_rotation, g_scaleDirection, g_translate, {x: 0, y: 0}, {x: 512, y: 512});
-    // drawClosingPolygon(ctx, transformedPolyPoints);
+function drawClosingPolygon(ctx, inPoints) {
+    if (inPoints.length == 0) {
+        return;
+    }
 
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+    ctx.beginPath();
+
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, 512);
+    ctx.lineTo(512, 512);
+    ctx.lineTo(512, 0);
+    ctx.closePath();
+
+    ctx.moveTo(inPoints[0].x, inPoints[0].y);
+    for (var i = 1; i < inPoints.length; i++) {//i = 1 to skip first point
+        var currentPoint = inPoints[i];
+        ctx.lineTo(currentPoint.x, currentPoint.y);
+    }
+    ctx.closePath();
+
+    //fill
+    ctx.fillStyle = 'rgba(255, 255, 255, 1.0)';
+    if (g_isMouseDownAndClickedOnCanvas && g_currentTranformationOperationState == enum_TransformationOperation.CROP) {
+        ctx.fillStyle = 'rgba(242, 242, 242, 0.3)';
+        ctx.strokeStyle = 'rgba(255, 0, 0, 0.9)';
+    }
+    ctx.mozFillRule = 'evenodd'; //for old firefox 1~30
+    ctx.fill('evenodd'); //for firefox 31+, IE 11+, chrome
+    ctx.stroke();
+};
+
+function drawCroppingPoints(canvasContext, croppingPoints) {
+    var transformedPolyPoints = croppingPoints;//getTransformedPolyPoints(g, g_scale, g_rotation, g_scaleDirection, g_translate, {x: 0, y: 0}, {x: 512, y: 512});
+    drawClosingPolygon(canvasContext, transformedPolyPoints);
 }
 
-function getVisableKeypoints() {
-    // var tempFilteredKeypointsStep = filterBasedOnVisible(newKeypoints, {x: 512, y: 512});//input is canvas/imageCutout size
-    // filterBasedOnClosingPoly(tempFilteredKeypointsStep, transformedPolyPoints);//input is canvas/imageCutout size
-    return g_keypoints;
+function isPointInPolygon(point, vs) {
+    // ray-casting algorithm based on
+    // http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html
+
+    var x = point[0], y = point[1];
+
+    var inside = false;
+    for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+        var xi = vs[i][0], yi = vs[i][1];
+        var xj = vs[j][0], yj = vs[j][1];
+
+        var intersect = ((yi > y) != (yj > y))
+            && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+
+    return inside;
+};
+
+function filterBasedOnClosingPoly(keypoints, coords) {
+    if (coords.length == 0) {
+        return keypoints;
+    }
+
+    var ret = [];
+    for (var i = 0; i < keypoints.length; i++) {
+        var keypoint = keypoints[i];
+        if (isPointInPolygon([keypoint.x, keypoint.y], coords)) {
+            ret.push(keypoint);
+        }
+    }
+    return ret;
+}
+
+function filterBasedOnVisible(keypoints, boundingBox) {
+    var ret = [];
+    for (var i = 0; i < keypoints.length; i++) {
+        var keypoint = keypoints[i];
+        if (keypoint.x >= boundingBox.x
+            || keypoint.x < 0
+            || keypoint.y >= boundingBox.y
+            || keypoint.y < 0) {
+            //ignore this keypoint
+        } else {
+            ret.push(keypoint)
+        }
+    }
+    return ret;
+}
+
+function getVisableKeypoints(keypoints, canvasDimensions, croppingPolygon) {
+    var keypointsInsideCanvas = filterBasedOnVisible(keypoints, canvasDimensions);
+    var result = filterBasedOnClosingPoly(keypointsInsideCanvas, croppingPolygon);
+    return result;
 }
 
 function applyChangesToTransformations(interactiveImageTransformations, transformationChanges) {
@@ -358,7 +567,6 @@ function draw() {
     //init variables
     var interactiveCanvasContext = document.getElementById('interactiveCanvas').getContext('2d');
     var referenceCanvasContext = document.getElementById('referenceCanvas').getContext('2d');
-    var filteredKeypoints = getVisableKeypoints();
     var croppingPoints = getCroppingPoints();
     var interactiveImageTransformations = getInteractiveImageTransformations();
     var transformationChanges = getTransformationChanges();
@@ -372,15 +580,22 @@ function draw() {
     }
 
     drawBackgroupImageWithTransformations(interactiveCanvasContext, getBackgroundImage(), transformations);
-    // drawBackgroupImage(referenceCanvasContext, getBackgroundImage());
+    drawBackgroupImage(referenceCanvasContext, getBackgroundImage());
+    var keypoints = getKeypoints();
+    var transformedKeypoints = computeTransformedKeypoints(keypoints, transformations);
+    var filteredKeypoints = getVisableKeypoints(transformedKeypoints, {x: 512, y: 512}, croppingPoints);
 
-    drawKeypointsWithTransformation(interactiveCanvasContext, filteredKeypoints, transformations);
-    // drawKeypointsWithTransformation(referenceCanvasContext, filteredKeypoints, getIdentityMatrix());
+    //draw reference image keypoints and triangles
+    drawKeypoints(referenceCanvasContext, keypoints);
+    var triangles = computeTriangles(filteredKeypoints);
+    var trianglesProjectedOntoReferenceCanvas = triangles;//computeTransformedTriangles(triangles, );
+    drawTriangles(referenceCanvasContext, trianglesProjectedOntoReferenceCanvas);
 
-    drawTriangles(interactiveCanvasContext, filteredKeypoints, transformations);
-    // drawTriangles(referenceCanvasContext, filteredKeypoints, getIdentityMatrix());
+    //draw interactive image keypoints and triangles
+    drawKeypoints(interactiveCanvasContext, filteredKeypoints);
+    drawTriangles(interactiveCanvasContext, triangles);
 
-    drawCroppingPoints(croppingPoints);
+    drawCroppingPoints(interactiveCanvasContext, croppingPoints);
 
     drawLineFromPointToMousePosition(referenceCanvasContext);
 
@@ -434,10 +649,18 @@ function getCurrentPageMousePosition(e) {
 }
 
 function getCurrentCanvasMousePosition(e) {
-    return {
-        y: 100,
-        x: 100
-    };
+    if (e.offsetX) {
+        return {
+            x: e.offsetX,
+            y: e.offsetY
+        };
+    } else if (e.layerX) {
+        return {
+            x: e.layerX,
+            y: e.layerY
+        };
+    }
+
 }
 
 function handleMouseUpTranslate(pageMousePosition) {
@@ -504,7 +727,7 @@ function handleMouseMoveScale(pageMousePosition) {
     direction = extraRotation % 360;
     scale = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
     scale /= 100;
-    scaleMatrix = getDirectionalScaleMatrix(Math.sqrt(scale), 1/Math.sqrt(scale), -direction);
+    scaleMatrix = getDirectionalScaleMatrix(Math.sqrt(scale), 1 / Math.sqrt(scale), -direction);
     g_transformationChanges.currentDirectionalScaleMatrix = scaleMatrix;
 }
 
@@ -561,7 +784,8 @@ function handleMouseDownRotate(pageMousePosition) {
 }
 
 function handleMouseDownCrop(mousePosition) {
-
+    g_croppingPolygonPoints = [];
+    g_croppingPolygonPoints.push(mousePosition);
 }
 
 function handleMouseDownOnCanvas(e) {
