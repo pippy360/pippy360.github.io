@@ -23,6 +23,7 @@ var enum_TransformationOperation = {
 var g_currentTranformationOperationState = enum_TransformationOperation.TRANSPOSE;
 
 var g_croppingPolygonPoints = [];
+var g_croppingPolygonInverseMatrix = getIdentityMatrix();//the inverse of the transformations applied at the time of drawing
 var g_dogImage = new Image();
 var g_keypoints = [];
 
@@ -32,6 +33,10 @@ function getBackgroundImage() {
 
 function getCroppingPoints() {
     return g_croppingPolygonPoints;
+}
+
+function getCroppingPointsTransformationMatrix() {
+    return g_croppingPolygonInverseMatrix;
 }
 
 var g_transformationChanges;//TODO: rename to something better
@@ -154,7 +159,7 @@ function convertSingleKeypointToMatrix(keypoint) {
     return [[keypoint.x], [keypoint.y], [1]];
 }
 
-function convertKeypointsToMatrixKeypoint(keypoints) {
+function convertKeypointsToMatrixKeypoints(keypoints) {
     var ret = [];
     for (var i = 0; i < keypoints.length; i++) {
         var newKeypoint = convertSingleKeypointToMatrix(keypoints[i]);
@@ -214,7 +219,7 @@ function convertMatrixKeypointsToKeypointObjects(keypoints) {
 
 function computeTransformedKeypoints(keypoints, transformations) {
     //turn the keypoints into arrays with an extra 1 at the end. {x: 2, y: 3} ---> [[2],[3],[1]]
-    var newKeypoints = convertKeypointsToMatrixKeypoint(keypoints);
+    var newKeypoints = convertKeypointsToMatrixKeypoints(keypoints);
 
     //now calc the transformation mat
     var transformationMat = convertTransformationObjectToTransformationMatrix(transformations);
@@ -456,7 +461,7 @@ function drawClosingPolygon(ctx, inPoints) {
         return;
     }
 
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.0)';
     ctx.beginPath();
 
     ctx.moveTo(0, 0);
@@ -492,12 +497,12 @@ function isPointInPolygon(point, vs) {
     // ray-casting algorithm based on
     // http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html
 
-    var x = point[0], y = point[1];
+    var x = point.x, y = point.y;
 
     var inside = false;
     for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
-        var xi = vs[i][0], yi = vs[i][1];
-        var xj = vs[j][0], yj = vs[j][1];
+        var xi = vs[i].x, yi = vs[i].y;
+        var xj = vs[j].x, yj = vs[j].y;
 
         var intersect = ((yi > y) != (yj > y))
             && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
@@ -515,7 +520,7 @@ function filterBasedOnClosingPoly(keypoints, coords) {
     var ret = [];
     for (var i = 0; i < keypoints.length; i++) {
         var keypoint = keypoints[i];
-        if (isPointInPolygon([keypoint.x, keypoint.y], coords)) {
+        if (isPointInPolygon(keypoint, coords)) {
             ret.push(keypoint);
         }
     }
@@ -563,6 +568,23 @@ function applyChangesToTransformations(interactiveImageTransformations, transfor
     }
 }
 
+function getTransformedCroppingPointsMatrix(croppingPoints, transformationMatrix) {
+    var ret = [];
+    for(var i = 0; i < croppingPoints.length; i++) {
+        var point = croppingPoints[i];
+        var point2 = convertSingleKeypointToMatrix(point);
+        var transformedPoint = applyTransformationMatToSingleKeypoint(point2, transformationMatrix);
+        var point3 = convertSingleMatrixKeypoinToKeypointObject(transformedPoint);
+        ret.push(point3);
+    }
+    return ret;
+}
+
+function getTransformedCroppingPoints(croppingPoints, transformations) {
+    var transformationMatrix = convertTransformationObjectToTransformationMatrix(transformations);
+    return getTransformedCroppingPointsMatrix(croppingPoints, transformationMatrix);
+}
+
 function draw() {
     //init variables
     var interactiveCanvasContext = document.getElementById('interactiveCanvas').getContext('2d');
@@ -595,7 +617,9 @@ function draw() {
     drawKeypoints(interactiveCanvasContext, filteredKeypoints);
     drawTriangles(interactiveCanvasContext, triangles);
 
-    drawCroppingPoints(interactiveCanvasContext, croppingPoints);
+    var transformedCroppingPoints1 = getTransformedCroppingPointsMatrix(croppingPoints, getCroppingPointsTransformationMatrix());
+    var transformedCroppingPoints2 = getTransformedCroppingPoints(transformedCroppingPoints1, transformations);
+    drawCroppingPoints(interactiveCanvasContext, transformedCroppingPoints2);
 
     drawLineFromPointToMousePosition(referenceCanvasContext);
 
@@ -616,7 +640,7 @@ $(document).mousedown(function (e) {
 
 $(document).mousemove(function (e) {
     if (g_isMouseDownAndClickedOnCanvas) {
-        handleMouseMove(e);
+        handleMouseMoveOnDocument(e);
     }
 });
 
@@ -634,7 +658,9 @@ $("#interactiveCanvas").mousedown(function (e) {
 });
 
 $("#interactiveCanvas").mousemove(function (e) {
-    //ignore
+    if (g_isMouseDownAndClickedOnCanvas) {
+        handleMouseMoveOnCanvas(e);
+    }
 });
 
 $("#interactiveCanvas").mouseup(function (e) {
@@ -681,7 +707,8 @@ function handleMouseUpRotate() {
 }
 
 function handleMouseUpCrop(mousePosition) {
-    g_croppingPolygonPoints.push(mousePosition);
+    //ignore
+    //g_croppingPolygonPoints.push(mousePosition);
 }
 
 function handleMouseUp(e) {
@@ -748,9 +775,8 @@ function handleMouseMoveCrop(mousePosition) {
     g_croppingPolygonPoints.push(mousePosition);
 }
 
-function handleMouseMove(e) {
+function handleMouseMoveOnDocument(e) {
     var pageMousePosition = getCurrentPageMousePosition(e);
-    var canvasMousePosition = getCurrentCanvasMousePosition(e);
 
     switch (g_currentTranformationOperationState) {
         case enum_TransformationOperation.TRANSLATE:
@@ -761,6 +787,28 @@ function handleMouseMove(e) {
             break;
         case enum_TransformationOperation.ROTATE:
             handleMouseMoveRotate(pageMousePosition);
+            break;
+        case enum_TransformationOperation.CROP:
+            //ignore, handled in canvas on mouse move function
+            break;
+        default:
+            console.log("ERROR: Invalid state.");
+            break;
+    }
+}
+
+function handleMouseMoveOnCanvas(e) {
+    var canvasMousePosition = getCurrentCanvasMousePosition(e);
+
+    switch (g_currentTranformationOperationState) {
+        case enum_TransformationOperation.TRANSLATE:
+            //ignore
+            break;
+        case enum_TransformationOperation.SCALE:
+            //ignore
+            break;
+        case enum_TransformationOperation.ROTATE:
+            //ignore
             break;
         case enum_TransformationOperation.CROP:
             handleMouseMoveCrop(canvasMousePosition);
@@ -785,7 +833,9 @@ function handleMouseDownRotate(pageMousePosition) {
 
 function handleMouseDownCrop(mousePosition) {
     g_croppingPolygonPoints = [];
-    g_croppingPolygonPoints.push(mousePosition);
+    var tempMat = convertTransformationObjectToTransformationMatrix(g_interactiveImageTransformation)
+    g_croppingPolygonInverseMatrix = math.inv(tempMat);
+    //g_croppingPolygonPoints.push(mousePosition);
 }
 
 function handleMouseDownOnCanvas(e) {
