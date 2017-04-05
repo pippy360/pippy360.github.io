@@ -682,16 +682,18 @@ function getCurrentPageMousePosition(e) {
 }
 
 function getCurrentCanvasMousePosition(e) {
-    if (e.offsetX) {
+    if (e.offsetX || e.offsetX === 0) {
         return {
             x: e.offsetX,
             y: e.offsetY
         };
-    } else if (e.layerX) {
+    } else if (e.layerX || e.offsetX === 0) {
         return {
             x: e.layerX,
             y: e.layerY
         };
+    } else {
+        console.log("Error: Invalid state");
     }
 
 }
@@ -882,7 +884,7 @@ function setCurrnetOperation(newState) {
 }
 
 function init() {
-    g_keypoints = generateRandomKeypoints({x: 512, y: 512}, 5);
+    g_keypoints = generateRandomKeypoints({x: 512, y: 512}, 20);
     wipeTransformationChanges();
     setCurrnetOperation(enum_TransformationOperation.TRANSLATE);
     g_dogImage.src = 'dog1_resize.jpg';
