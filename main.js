@@ -6,6 +6,8 @@
 // #     # #      #    # #    # #    # #           # #   #    # #   #  #    #
 //  #####  ######  ####  #####  #    # ######       #    #    # #    #  ####
 //global vars
+var g_shouldDrawTriangles = true;
+var g_shouldDrawKeypoints = true;
 
 var g_maxPntDist = 6000;
 var g_minPntDist = 50;
@@ -26,6 +28,14 @@ var g_croppingPolygonPoints = [];
 var g_croppingPolygonInverseMatrix = getIdentityMatrix();//the inverse of the transformations applied at the time of drawing
 var g_dogImage = new Image();
 var g_keypoints = [];
+
+function toggleDrawKeypointsMode() {
+    g_shouldDrawKeypoints = !g_shouldDrawKeypoints;
+}
+
+function toggleDrawTrianglesMode(){
+   g_shouldDrawTriangles = !g_shouldDrawTriangles;
+}
 
 function getBackgroundImage() {
     return g_dogImage;
@@ -615,16 +625,22 @@ function draw() {
 
     var filteredKeypoints = getVisableKeypoints(transformedKeypoints, {x: 512, y: 512}, transformedCroppingPoints2);
 
-    //draw reference image keypoints and triangles
-    drawKeypoints(referenceCanvasContext, keypoints);
+    if(g_shouldDrawKeypoints) {
+        drawKeypoints(referenceCanvasContext, keypoints);
+    }
+
     var triangles = computeTriangles(filteredKeypoints);
     var transformationMatrix = convertTransformationObjectToTransformationMatrix(transformations);
     var trianglesProjectedOntoReferenceCanvas = computeTransformedTrianglesWithMatrix(triangles, math.inv(transformationMatrix));
-    drawTriangles(referenceCanvasContext, trianglesProjectedOntoReferenceCanvas);
-
-    //draw interactive image keypoints and triangles
-    drawKeypoints(interactiveCanvasContext, filteredKeypoints);
-    drawTriangles(interactiveCanvasContext, triangles);
+    if(g_shouldDrawTriangles) {
+        drawTriangles(referenceCanvasContext, trianglesProjectedOntoReferenceCanvas);
+    }
+    if(g_shouldDrawKeypoints) {
+        drawKeypoints(interactiveCanvasContext, filteredKeypoints);
+    }
+    if(g_shouldDrawTriangles) {
+        drawTriangles(interactiveCanvasContext, triangles);
+    }
 
     drawCroppingPoints(interactiveCanvasContext, transformedCroppingPoints2);
 
