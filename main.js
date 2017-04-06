@@ -28,6 +28,7 @@ var g_croppingPolygonPoints = [];
 var g_croppingPolygonInverseMatrix = getIdentityMatrix();//the inverse of the transformations applied at the time of drawing
 var g_dogImage = new Image();
 var g_keypoints = [];
+var g_cachedFilteredKeypoints = [];
 
 function toggleDrawKeypointsMode() {
     g_shouldDrawKeypoints = !g_shouldDrawKeypoints;
@@ -90,6 +91,62 @@ function getInteractiveImageTransformations() {
 function getKeypoints() {
     return g_keypoints;
 }
+
+
+// #####  ####### ######  #     # ####### ######
+//#     # #       #     # #     # #       #     #
+//#       #       #     # #     # #       #     #
+// #####  #####   ######  #     # #####   ######
+//      # #       #   #    #   #  #       #   #
+//#     # #       #    #    # #   #       #    #
+// #####  ####### #     #    #    ####### #     #
+//server
+
+
+function callSearch() {
+   var interactiveCanvasContext = document.getElementById('interactiveCanvas');
+   var image1 = interactiveCanvasContext.toDataURL('image/jpeg', 0.92).replace("image/jpeg", "image/octet-stream");  // here is the most important part because if you dont replace you will get a DOM 18 exception.
+   var referenceCanvasContext = document.getElementById('referenceCanvas');
+   var image2 = referenceCanvasContext.toDataURL('image/jpeg', 0.92).replace("image/jpeg", "image/octet-stream");  // here is the most important part because if you dont replace you will get a DOM 18 exception.
+
+   var regex = /^data:.+\/(.+);base64,(.*)$/;
+
+   var matches;
+   matches = image1.match(regex);
+   var data1 = matches[2];
+   matches = image2.match(regex);
+   var data2 = matches[2];
+
+   var info = {
+       'image1': {
+           'imageData': data1,
+           'keypoints': g_cachedFilteredKeypoints
+       },
+       'image2': {
+           'imageData': data2,
+           'keypoints': g_keypoints
+       }
+   };
+
+   $("#searchResultsOutputDiv").html("loading...");
+
+   $.ajax({
+       url: 'http://104.197.137.79/runTestWithJsonData',
+       type: 'POST',
+       data: JSON.stringify(info),
+       contentType: 'application/json; charset=utf-8',
+       dataType: 'json',
+       async: true,
+       success: function(msg) {
+           console.log(msg);
+           $("#searchResultsOutputDiv").html("Found this many matches: " + msg);
+       },
+       error: function(msg) {
+
+       }
+   });
+}
+
 
 // #     #
 // ##   ##   ##   ##### #    #
@@ -624,7 +681,7 @@ function draw() {
     var transformedCroppingPoints2 = getTransformedCroppingPoints(transformedCroppingPoints1, transformations);
 
     var filteredKeypoints = getVisableKeypoints(transformedKeypoints, {x: 512, y: 512}, transformedCroppingPoints2);
-
+    g_cachedFilteredKeypoints = filteredKeypoints;
     if(g_shouldDrawKeypoints) {
         drawKeypoints(referenceCanvasContext, keypoints);
     }
@@ -900,7 +957,7 @@ function setCurrnetOperation(newState) {
 }
 
 function init() {
-    g_keypoints = generateRandomKeypoints({x: 512, y: 512}, 20);
+    g_keypoints = generateRandomKeypoints({x: 512, y: 512}, 6);
     wipeTransformationChanges();
     setCurrnetOperation(enum_TransformationOperation.TRANSLATE);
     g_dogImage.src = 'dog1_resize.jpg';
