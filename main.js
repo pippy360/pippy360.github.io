@@ -656,6 +656,27 @@ function getTransformedCroppingPoints(croppingPoints, transformations) {
     return getTransformedCroppingPointsMatrix(croppingPoints, transformationMatrix);
 }
 
+function filterInvalidTriangles(triangles) {
+    var ret = [];
+    for(var i = 0; i < triangles.length; i++) {
+        var triangle = triangles[i];
+        //FIXME: THIS TRIANGLE FILERING STUFF IS JUNK!!! FIX IT
+        var d1 = getEuclideanDistance(triangle[0], triangle[1]);
+        var d2 = getEuclideanDistance(triangle[0], triangle[2]);
+        if(d1 > g_minPntDist
+            && d1 < g_maxPntDist
+            && d2 > g_minPntDist
+            && d2 < g_maxPntDist
+            && getArea(triangle) > g_minTriArea
+        ) {
+            ret.push(triangle)
+        } else {
+            //Invalid triangle, ignore
+        }
+    }
+    return ret;
+}
+
 function draw() {
     //init variables
     var interactiveCanvasContext = document.getElementById('interactiveCanvas').getContext('2d');
@@ -684,18 +705,15 @@ function draw() {
     g_cachedFilteredKeypoints = filteredKeypoints;
     if(g_shouldDrawKeypoints) {
         drawKeypoints(referenceCanvasContext, keypoints);
+        drawKeypoints(interactiveCanvasContext, filteredKeypoints);
     }
 
     var triangles = computeTriangles(filteredKeypoints);
     var transformationMatrix = convertTransformationObjectToTransformationMatrix(transformations);
     var trianglesProjectedOntoReferenceCanvas = computeTransformedTrianglesWithMatrix(triangles, math.inv(transformationMatrix));
     if(g_shouldDrawTriangles) {
-        drawTriangles(referenceCanvasContext, trianglesProjectedOntoReferenceCanvas);
-    }
-    if(g_shouldDrawKeypoints) {
-        drawKeypoints(interactiveCanvasContext, filteredKeypoints);
-    }
-    if(g_shouldDrawTriangles) {
+        filteredReferenceImageTriangles = filterInvalidTriangles(trianglesProjectedOntoReferenceCanvas);
+        drawTriangles(referenceCanvasContext, filteredReferenceImageTriangles);
         drawTriangles(interactiveCanvasContext, triangles);
     }
 
