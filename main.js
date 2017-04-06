@@ -957,7 +957,7 @@ function setCurrnetOperation(newState) {
 }
 
 function init() {
-    g_keypoints = generateRandomKeypoints({x: 512, y: 512}, 6);
+    g_keypoints = generateRandomKeypoints({x: 512, y: 512}, 20);
     wipeTransformationChanges();
     setCurrnetOperation(enum_TransformationOperation.TRANSLATE);
     g_dogImage.src = 'dog1_resize.jpg';
