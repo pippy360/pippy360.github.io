@@ -11,16 +11,17 @@ var g_shouldDrawKeypoints = true;
 
 var g_maxPntDist = 6000;
 var g_minPntDist = 50;
-var g_minTriArea = 100;//11000;
+var g_minTriArea = 400;//11000;
 //var g_maxTriArea = 21000;
 
 var g_isMouseDownAndClickedOnCanvas = false;
 
 var enum_TransformationOperation = {
     TRANSLATE: 1,
-    SCALE: 2,
-    ROTATE: 3,
-    CROP: 4
+    UNIFORM_SCALE: 2,
+    NON_UNIFORM_SCALE: 3,
+    ROTATE: 4,
+    CROP: 5
 };
 var g_currentTranformationOperationState = enum_TransformationOperation.TRANSPOSE;
 
@@ -54,6 +55,7 @@ var g_transformationChanges;//TODO: rename to something better
 
 function wipeTransformationChanges() {
     g_transformationChanges = {
+        currentUniformScale: 1,
         currentDirectionalScaleMatrix: getIdentityMatrix(),
         currentRotation: 0,
         currentTranslate: {
@@ -76,6 +78,7 @@ var g_interactiveImageTransformation = {
         x: 512 / 2,
         y: 512 / 2
     },
+    uniformScale: 1,
     directionalScaleMatrix: getIdentityMatrix(),
     rotation: 0,
     translate: {
@@ -239,18 +242,21 @@ function convertTransformationObjectToTransformationMatrix(transformations) {
     var rotationCenterPoint = transformations.rotationCenterPoint;
     var ret = getIdentityMatrix();
 
+    ret = matrixMultiply(ret, getTranslateMatrix(rotationCenterPoint.x, rotationCenterPoint.y));
+    ret = matrixMultiply(ret, getScaleMatrix(transformations.uniformScale, transformations.uniformScale));
+    ret = matrixMultiply(ret, getTranslateMatrix(-rotationCenterPoint.x, -rotationCenterPoint.y));
 
     //Translate
     ret = matrixMultiply(ret, getTranslateMatrix(-transformations.translate.x, -transformations.translate.y));
 
-    //Scale
-    ret = matrixMultiply(ret, getTranslateMatrix(rotationCenterPoint.x, rotationCenterPoint.y));
-    ret = matrixMultiply(ret, transformations.directionalScaleMatrix);
-    ret = matrixMultiply(ret, getTranslateMatrix(-rotationCenterPoint.x, -rotationCenterPoint.y));
-
     //Rotate
     ret = matrixMultiply(ret, getTranslateMatrix(rotationCenterPoint.x, rotationCenterPoint.y));
     ret = matrixMultiply(ret, getRotatoinMatrix(-transformations.rotation));
+    ret = matrixMultiply(ret, getTranslateMatrix(-rotationCenterPoint.x, -rotationCenterPoint.y));
+
+    //Scale
+    ret = matrixMultiply(ret, getTranslateMatrix(rotationCenterPoint.x, rotationCenterPoint.y));
+    ret = matrixMultiply(ret, transformations.directionalScaleMatrix);
     ret = matrixMultiply(ret, getTranslateMatrix(-rotationCenterPoint.x, -rotationCenterPoint.y));
 
     return ret;
@@ -463,7 +469,18 @@ function drawBackgroupImageWithTransformations(canvasContext, image, transformat
     //Center image
 
     var translation = transformations.translate;
+
+
+    canvasContext.translate(transformations.rotationCenterPoint.x, transformations.rotationCenterPoint.y);
+    canvasContext.scale(transformations.uniformScale, transformations.uniformScale);
+    canvasContext.translate(-transformations.rotationCenterPoint.x, -transformations.rotationCenterPoint.y);
+
     canvasContext.translate(-translation.x, -translation.y);
+
+    //rotate around center point
+    canvasContext.translate(transformations.rotationCenterPoint.x, transformations.rotationCenterPoint.y);
+    canvasContext.rotate(transformations.rotation * Math.PI / 180.0 * -1.0);
+    canvasContext.translate(-transformations.rotationCenterPoint.x, -transformations.rotationCenterPoint.y);
 
     //scale in a given direction
     canvasContext.translate(transformations.rotationCenterPoint.x, transformations.rotationCenterPoint.y);
@@ -471,17 +488,12 @@ function drawBackgroupImageWithTransformations(canvasContext, image, transformat
     canvasContext.transform(mat[0][0], mat[1][0], mat[0][1], mat[1][1], mat[0][2], mat[1][2]);
     canvasContext.translate(-transformations.rotationCenterPoint.x, -transformations.rotationCenterPoint.y);
 
-    //rotate around center point
-    canvasContext.translate(transformations.rotationCenterPoint.x, transformations.rotationCenterPoint.y);
-    canvasContext.rotate(transformations.rotation * Math.PI / 180.0 * -1.0);
-    canvasContext.translate(-transformations.rotationCenterPoint.x, -transformations.rotationCenterPoint.y);
 
     canvasContext.translate(canvasContext.canvas.width / 2, canvasContext.canvas.height / 2);
     canvasContext.drawImage(image, -image.width / 2, -image.height / 2);
 
     canvasContext.restore();
 }
-
 
 function drawBackgroupImage(canvasContext, image) {
     canvasContext.drawImage(image, 0, 0);
@@ -628,9 +640,12 @@ function applyChangesToTransformations(interactiveImageTransformations, transfor
     var currentRotation = transformationChanges.currentRotation;
     var savedScaleMatrix = interactiveImageTransformations.directionalScaleMatrix;
     var currentScaleMatrix = transformationChanges.currentDirectionalScaleMatrix;
+    var savedUniformScale = interactiveImageTransformations.uniformScale;
+    var currentUniformScale = transformationChanges.currentUniformScale;
     return {
         rotationCenterPoint: interactiveImageTransformations.rotationCenterPoint,
         directionalScaleMatrix: matrixMultiply(savedScaleMatrix, currentScaleMatrix),
+        uniformScale: savedUniformScale*currentUniformScale,
         rotation: currentRotation + savedRotation,
         translate: {
             x: translateSaved.x + translateChange.x,
@@ -795,10 +810,15 @@ function handleMouseUpTranslate(pageMousePosition) {
     g_interactiveImageTransformation.translate = addTwoPoints(g_interactiveImageTransformation.translate, translateDelta);
 }
 
-function handleMouseUpScale() {
+function handleMouseUpNonUniformScale() {
     var savedScaleMatrix = g_interactiveImageTransformation.directionalScaleMatrix;
     var tempScaleMatrix = matrixMultiply(savedScaleMatrix, g_transformationChanges.currentDirectionalScaleMatrix);
     g_interactiveImageTransformation.directionalScaleMatrix = tempScaleMatrix;
+}
+
+function handleMouseUpUniformScale() {
+    var savedScale = g_interactiveImageTransformation.uniformScale;
+    g_interactiveImageTransformation.uniformScale = savedScale*g_transformationChanges.currentUniformScale;
 }
 
 function handleMouseUpRotate() {
@@ -819,8 +839,11 @@ function handleMouseUp(e) {
         case enum_TransformationOperation.TRANSLATE:
             handleMouseUpTranslate(pageMousePosition);
             break;
-        case enum_TransformationOperation.SCALE:
-            handleMouseUpScale();
+        case enum_TransformationOperation.NON_UNIFORM_SCALE:
+            handleMouseUpNonUniformScale();
+            break;
+        case enum_TransformationOperation.UNIFORM_SCALE:
+            handleMouseUpUniformScale();
             break;
         case enum_TransformationOperation.ROTATE:
             handleMouseUpRotate();
@@ -842,7 +865,7 @@ function handleMouseMoveTranslate(pageMousePosition) {
     g_transformationChanges.currentTranslate = translateDelta;
 }
 
-function handleMouseMoveScale(pageMousePosition) {
+function handleMouseMoveNonUniformScale(pageMousePosition) {
     var mouseDownPoint = g_transformationChanges.mouseDownPosition;
     var y = (pageMousePosition.y - mouseDownPoint.y);
     var x = (pageMousePosition.x - mouseDownPoint.x);
@@ -856,6 +879,17 @@ function handleMouseMoveScale(pageMousePosition) {
     scale /= 100;
     scaleMatrix = getDirectionalScaleMatrix(Math.sqrt(scale), 1 / Math.sqrt(scale), -direction);
     g_transformationChanges.currentDirectionalScaleMatrix = scaleMatrix;
+}
+
+function handleMouseMoveUniformScale(pageMousePosition) {
+    var mouseDownPoint = g_transformationChanges.mouseDownPosition;
+    var y = (pageMousePosition.y - mouseDownPoint.y);
+    var x = (pageMousePosition.x - mouseDownPoint.x);
+
+    scale = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
+    scale /= 100;
+    g_transformationChanges.currentUniformScale = scale;
+    console.log(scale);
 }
 
 function handleMouseMoveRotate(pageMousePosition) {
@@ -882,8 +916,11 @@ function handleMouseMoveOnDocument(e) {
         case enum_TransformationOperation.TRANSLATE:
             handleMouseMoveTranslate(pageMousePosition, getInteractiveImageTransformations());
             break;
-        case enum_TransformationOperation.SCALE:
-            handleMouseMoveScale(pageMousePosition);
+        case enum_TransformationOperation.NON_UNIFORM_SCALE:
+            handleMouseMoveNonUniformScale(pageMousePosition);
+            break;
+        case enum_TransformationOperation.UNIFORM_SCALE:
+            handleMouseMoveUniformScale(pageMousePosition);
             break;
         case enum_TransformationOperation.ROTATE:
             handleMouseMoveRotate(pageMousePosition);
@@ -904,7 +941,10 @@ function handleMouseMoveOnCanvas(e) {
         case enum_TransformationOperation.TRANSLATE:
             //ignore
             break;
-        case enum_TransformationOperation.SCALE:
+        case enum_TransformationOperation.NON_UNIFORM_SCALE:
+            //ignore
+            break;
+        case enum_TransformationOperation.UNIFORM_SCALE:
             //ignore
             break;
         case enum_TransformationOperation.ROTATE:
@@ -923,7 +963,11 @@ function handleMouseDownTranslate(canvasMousePosition) {
     //do nothing
 }
 
-function handleMouseDownScale(pageMousePosition) {
+function handleMouseDownNonUniformScale(pageMousePosition) {
+    //do nothing
+}
+
+function handleMouseDownUniformScale(pageMousePosition) {
     //do nothing
 }
 
@@ -946,8 +990,11 @@ function handleMouseDownOnCanvas(e) {
         case enum_TransformationOperation.TRANSLATE:
             handleMouseDownTranslate(pageMousePosition);
             break;
-        case enum_TransformationOperation.SCALE:
-            handleMouseDownScale();
+        case enum_TransformationOperation.NON_UNIFORM_SCALE:
+            handleMouseDownNonUniformScale();
+            break;
+        case enum_TransformationOperation.UNIFORM_SCALE:
+            handleMouseDownUniformScale();
             break;
         case enum_TransformationOperation.ROTATE:
             handleMouseDownRotate(pageMousePosition);
@@ -975,7 +1022,7 @@ function setCurrnetOperation(newState) {
 }
 
 function init() {
-    g_keypoints = generateRandomKeypoints({x: 512, y: 512}, 20);
+    g_keypoints = generateRandomKeypoints({x: 512, y: 512}, 30);
     wipeTransformationChanges();
     setCurrnetOperation(enum_TransformationOperation.TRANSLATE);
     g_dogImage.src = 'dog1_resize.jpg';
