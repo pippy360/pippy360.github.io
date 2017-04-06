@@ -9,7 +9,7 @@
 var g_shouldDrawTriangles = true;
 var g_shouldDrawKeypoints = true;
 
-var g_maxPntDist = 6000;
+var g_maxPntDist = 600;
 var g_minPntDist = 50;
 var g_minTriArea = 400;//11000;
 //var g_maxTriArea = 21000;
@@ -496,7 +496,7 @@ function drawBackgroupImageWithTransformations(canvasContext, image, transformat
 }
 
 function drawBackgroupImage(canvasContext, image) {
-    canvasContext.drawImage(image, 0, 0);
+    canvasContext.drawImage(image, -image.width / 2, -image.height / 2);
 }
 
 
@@ -889,7 +889,6 @@ function handleMouseMoveUniformScale(pageMousePosition) {
     scale = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
     scale /= 100;
     g_transformationChanges.currentUniformScale = scale;
-    console.log(scale);
 }
 
 function handleMouseMoveRotate(pageMousePosition) {
@@ -1025,7 +1024,7 @@ function init() {
     g_keypoints = generateRandomKeypoints({x: 512, y: 512}, 30);
     wipeTransformationChanges();
     setCurrnetOperation(enum_TransformationOperation.TRANSLATE);
-    g_dogImage.src = 'dog1_resize.jpg';
+    g_dogImage.src = 'rick1.jpg';
     window.requestAnimationFrame(draw);
 }
 
