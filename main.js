@@ -9,7 +9,7 @@
 var g_shouldDrawTriangles = true;
 var g_shouldDrawKeypoints = true;
 
-var g_maxPntDist = 600;
+var g_maxPntDist = 200;
 var g_minPntDist = 50;
 var g_minTriArea = 400;//11000;
 //var g_maxTriArea = 21000;
@@ -75,8 +75,8 @@ function getTransformationChanges() {
 
 var g_interactiveImageTransformation = {
     rotationCenterPoint: {
-        x: 512 / 2,
-        y: 512 / 2
+        x: 1920 / 2,
+        y: 1080 / 2
     },
     uniformScale: 1,
     directionalScaleMatrix: getIdentityMatrix(),
@@ -489,14 +489,17 @@ function drawBackgroupImageWithTransformations(canvasContext, image, transformat
     canvasContext.translate(-transformations.rotationCenterPoint.x, -transformations.rotationCenterPoint.y);
 
 
-    canvasContext.translate(canvasContext.canvas.width / 2, canvasContext.canvas.height / 2);
-    canvasContext.drawImage(image, -image.width / 2, -image.height / 2);
+    canvasContext.translate(-image.width / 2, -image.height / 2);
+    canvasContext.drawImage(image, 512/2, 512/2);
 
     canvasContext.restore();
 }
 
 function drawBackgroupImage(canvasContext, image) {
-    canvasContext.drawImage(image, -image.width / 2, -image.height / 2);
+    canvasContext.save();
+    canvasContext.translate(-image.width / 2, -image.height / 2);
+    canvasContext.drawImage(image, 512/2, 512/2);
+    canvasContext.restore();
 }
 
 
@@ -1021,10 +1024,11 @@ function setCurrnetOperation(newState) {
 }
 
 function init() {
-    g_keypoints = generateRandomKeypoints({x: 512, y: 512}, 30);
+    //g_dogImage.src = 'dog1_resize.jpg';
+    g_dogImage.src = 'rick1.jpg';
+    g_keypoints = generateRandomKeypoints({x: g_dogImage.width, y: g_dogImage.height}, 100);
     wipeTransformationChanges();
     setCurrnetOperation(enum_TransformationOperation.TRANSLATE);
-    g_dogImage.src = 'rick1.jpg';
     window.requestAnimationFrame(draw);
 }
 
