@@ -242,12 +242,13 @@ function convertTransformationObjectToTransformationMatrix(transformations) {
     var rotationCenterPoint = transformations.rotationCenterPoint;
     var ret = getIdentityMatrix();
 
-    ret = matrixMultiply(ret, getTranslateMatrix(rotationCenterPoint.x, rotationCenterPoint.y));
-    ret = matrixMultiply(ret, getScaleMatrix(transformations.uniformScale, transformations.uniformScale));
-    ret = matrixMultiply(ret, getTranslateMatrix(-rotationCenterPoint.x, -rotationCenterPoint.y));
 
     //Translate
     ret = matrixMultiply(ret, getTranslateMatrix(-transformations.translate.x, -transformations.translate.y));
+
+    ret = matrixMultiply(ret, getTranslateMatrix(rotationCenterPoint.x, rotationCenterPoint.y));
+    ret = matrixMultiply(ret, getScaleMatrix(transformations.uniformScale, transformations.uniformScale));
+    ret = matrixMultiply(ret, getTranslateMatrix(-rotationCenterPoint.x, -rotationCenterPoint.y));
 
     //Rotate
     ret = matrixMultiply(ret, getTranslateMatrix(rotationCenterPoint.x, rotationCenterPoint.y));
@@ -466,39 +467,49 @@ function drawBackgroupImageWithTransformations(canvasContext, image, transformat
 
     canvasContext.save();
 
-    //Center image
+    //Center image around {x: 0, y:0} so all transformations are apply from the center of the image
+    canvasContext.translate(image.width / 2, image.height / 2);
 
+    //
+    //Translate operation
+    //
     var translation = transformations.translate;
-
-
-    canvasContext.translate(transformations.rotationCenterPoint.x, transformations.rotationCenterPoint.y);
-    canvasContext.scale(transformations.uniformScale, transformations.uniformScale);
-    canvasContext.translate(-transformations.rotationCenterPoint.x, -transformations.rotationCenterPoint.y);
-
     canvasContext.translate(-translation.x, -translation.y);
 
-    //rotate around center point
-    canvasContext.translate(transformations.rotationCenterPoint.x, transformations.rotationCenterPoint.y);
+    //
+    //Scale operation
+    //
+    // canvasContext.translate(transformations.rotationCenterPoint.x, transformations.rotationCenterPoint.y);
+    canvasContext.scale(transformations.uniformScale, transformations.uniformScale);
+    // canvasContext.translate(-transformations.rotationCenterPoint.x, -transformations.rotationCenterPoint.y);
+
+
+    //
+    //Rotate operation around center point
+    //
+    // canvasContext.translate(transformations.rotationCenterPoint.x, transformations.rotationCenterPoint.y);
     canvasContext.rotate(transformations.rotation * Math.PI / 180.0 * -1.0);
-    canvasContext.translate(-transformations.rotationCenterPoint.x, -transformations.rotationCenterPoint.y);
+    // canvasContext.translate(-transformations.rotationCenterPoint.x, -transformations.rotationCenterPoint.y);
 
+    //
     //scale in a given direction
-    canvasContext.translate(transformations.rotationCenterPoint.x, transformations.rotationCenterPoint.y);
+    //
     var mat = transformations.directionalScaleMatrix;
+    // canvasContext.translate(transformations.rotationCenterPoint.x, transformations.rotationCenterPoint.y);
     canvasContext.transform(mat[0][0], mat[1][0], mat[0][1], mat[1][1], mat[0][2], mat[1][2]);
-    canvasContext.translate(-transformations.rotationCenterPoint.x, -transformations.rotationCenterPoint.y);
+    // canvasContext.translate(-transformations.rotationCenterPoint.x, -transformations.rotationCenterPoint.y);
 
 
-    canvasContext.translate(-image.width / 2, -image.height / 2);
-    canvasContext.drawImage(image, 512/2, 512/2);
+    canvasContext.translate(-image.width / 2, -image.height / 2);//bring the image back to it's original position
+    canvasContext.drawImage(image, 0 , 0)//, 512/2, 512/2);
 
     canvasContext.restore();
 }
 
 function drawBackgroupImage(canvasContext, image) {
     canvasContext.save();
-    canvasContext.translate(-image.width / 2, -image.height / 2);
-    canvasContext.drawImage(image, 512/2, 512/2);
+    //canvasContext.translate(-image.width / 2, -image.height / 2);
+    canvasContext.drawImage(image, 0, 0)//, 512/2, 512/2);
     canvasContext.restore();
 }
 
@@ -891,6 +902,8 @@ function handleMouseMoveUniformScale(pageMousePosition) {
 
     scale = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
     scale /= 100;
+    if (scale < .1)
+        scale = .1;
     g_transformationChanges.currentUniformScale = scale;
 }
 
