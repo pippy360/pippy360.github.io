@@ -1,5 +1,3 @@
-//  #####                                        #     #
-// #     # #       ####  #####    ##   #         #     #   ##   #####   ####
 // #       #      #    # #    #  #  #  #         #     #  #  #  #    # #
 // #  #### #      #    # #####  #    # #         #     # #    # #    #  ####
 // #     # #      #    # #    # ###### #          #   #  ###### #####       #
@@ -10,9 +8,11 @@ var g_shouldDrawTriangles = true;
 var g_shouldDrawKeypoints = true;
 
 var g_maxPntDist = 200;
-var g_minPntDist = 50;
+var g_minPntDist = 150;
 var g_minTriArea = 400;//11000;
 //var g_maxTriArea = 21000;
+
+var g_currentActiveCanvasId = "interactiveCanvas"
 
 var g_isMouseDownAndClickedOnCanvas = false;
 
@@ -29,14 +29,24 @@ var g_croppingPolygonPoints = [];
 var g_croppingPolygonInverseMatrix = getIdentityMatrix();//the inverse of the transformations applied at the time of drawing
 var g_dogImage = new Image();
 var g_keypoints = [];
-var g_cachedFilteredKeypoints = [];
+var g_cachedCalculatedReferenceCanvasKeypoints = [];
+var g_cachedCalculatedInteractiveCanvasKeypoints = [];
 
 function toggleDrawKeypointsMode() {
     g_shouldDrawKeypoints = !g_shouldDrawKeypoints;
 }
-
-function toggleDrawTrianglesMode(){
-   g_shouldDrawTriangles = !g_shouldDrawTriangles;
+function toggleActiveCanvas() {
+    var id1 = "interactiveCanvas";
+    var id2 = "referenceCanvas";
+    if (g_currentActiveCanvasId == id1) {
+        g_currentActiveCanvasId = id2;
+    } else {
+        g_currentActiveCanvasId = id1;
+    }
+    console.log(g_currentActiveCanvasId);
+}
+function toggleDrawTrianglesMode() {
+    g_shouldDrawTriangles = !g_shouldDrawTriangles;
 }
 
 function getBackgroundImage() {
@@ -73,19 +83,29 @@ function getTransformationChanges() {
     return g_transformationChanges;
 }
 
-var g_interactiveImageTransformation = {
-    rotationCenterPoint: {
-        x: 1920 / 2,
-        y: 1080 / 2
-    },
-    uniformScale: 1,
-    directionalScaleMatrix: getIdentityMatrix(),
-    rotation: 0,
-    translate: {
-        x: 0,
-        y: 0
-    }
-};
+var g_referenceImageTransformation;
+
+var g_interactiveImageTransformation;
+
+function getIdentityTransformations() {
+    return {
+        rotationCenterPoint: {
+            x: 1920 / 2,
+            y: 1080 / 2
+        },
+        uniformScale: 1,
+        directionalScaleMatrix: getIdentityMatrix(),
+        rotation: 0,
+        translate: {
+            x: 0,
+            y: 0
+        }
+    };
+}
+
+function getReferenceImageTransformations() {
+    return g_referenceImageTransformation;
+}
 
 function getInteractiveImageTransformations() {
     return g_interactiveImageTransformation;
@@ -107,47 +127,47 @@ function getKeypoints() {
 
 
 function callSearch() {
-   var interactiveCanvasContext = document.getElementById('interactiveCanvas');
-   var image1 = interactiveCanvasContext.toDataURL('image/jpeg', 0.92).replace("image/jpeg", "image/octet-stream");  // here is the most important part because if you dont replace you will get a DOM 18 exception.
-   var referenceCanvasContext = document.getElementById('referenceCanvas');
-   var image2 = referenceCanvasContext.toDataURL('image/jpeg', 0.92).replace("image/jpeg", "image/octet-stream");  // here is the most important part because if you dont replace you will get a DOM 18 exception.
+    var interactiveCanvasContext = document.getElementById('interactiveCanvas');
+    var image1 = interactiveCanvasContext.toDataURL('image/jpeg', 0.92).replace("image/jpeg", "image/octet-stream");  // here is the most important part because if you dont replace you will get a DOM 18 exception.
+    var referenceCanvasContext = document.getElementById('referenceCanvas');
+    var image2 = referenceCanvasContext.toDataURL('image/jpeg', 0.92).replace("image/jpeg", "image/octet-stream");  // here is the most important part because if you dont replace you will get a DOM 18 exception.
 
-   var regex = /^data:.+\/(.+);base64,(.*)$/;
+    var regex = /^data:.+\/(.+);base64,(.*)$/;
 
-   var matches;
-   matches = image1.match(regex);
-   var data1 = matches[2];
-   matches = image2.match(regex);
-   var data2 = matches[2];
+    var matches;
+    matches = image1.match(regex);
+    var data1 = matches[2];
+    matches = image2.match(regex);
+    var data2 = matches[2];
 
-   var info = {
-       'image1': {
-           'imageData': data1,
-           'keypoints': g_cachedFilteredKeypoints
-       },
-       'image2': {
-           'imageData': data2,
-           'keypoints': g_keypoints
-       }
-   };
+    var info = {
+        'image1': {
+            'imageData': data1,
+            'keypoints': g_cachedCalculatedInteractiveCanvasKeypoints
+        },
+        'image2': {
+            'imageData': data2,
+            'keypoints': g_cachedCalculatedReferenceCanvasKeypoints
+        }
+    };
 
-   $("#searchResultsOutputDiv").html("loading...");
+    $("#searchResultsOutputDiv").html("loading...");
 
-   $.ajax({
-       url: 'http://104.197.137.79/runTestWithJsonData',
-       type: 'POST',
-       data: JSON.stringify(info),
-       contentType: 'application/json; charset=utf-8',
-       dataType: 'json',
-       async: true,
-       success: function(msg) {
-           console.log(msg);
-           $("#searchResultsOutputDiv").html("Found this many matches: " + msg);
-       },
-       error: function(msg) {
+    $.ajax({
+        url: 'http://104.197.137.79/runTestWithJsonData',
+        type: 'POST',
+        data: JSON.stringify(info),
+        contentType: 'application/json; charset=utf-8',
+        dataType: 'json',
+        async: true,
+        success: function (msg) {
+            console.log(msg);
+            $("#searchResultsOutputDiv").html("Found this many matches: " + msg);
+        },
+        error: function (msg) {
 
-       }
-   });
+        }
+    });
 }
 
 
@@ -501,7 +521,7 @@ function drawBackgroupImageWithTransformations(canvasContext, image, transformat
 
 
     canvasContext.translate(-image.width / 2, -image.height / 2);//bring the image back to it's original position
-    canvasContext.drawImage(image, 0 , 0)//, 512/2, 512/2);
+    canvasContext.drawImage(image, 0, 0)//, 512/2, 512/2);
 
     canvasContext.restore();
 }
@@ -659,7 +679,7 @@ function applyChangesToTransformations(interactiveImageTransformations, transfor
     return {
         rotationCenterPoint: interactiveImageTransformations.rotationCenterPoint,
         directionalScaleMatrix: matrixMultiply(savedScaleMatrix, currentScaleMatrix),
-        uniformScale: savedUniformScale*currentUniformScale,
+        uniformScale: savedUniformScale * currentUniformScale,
         rotation: currentRotation + savedRotation,
         translate: {
             x: translateSaved.x + translateChange.x,
@@ -670,7 +690,7 @@ function applyChangesToTransformations(interactiveImageTransformations, transfor
 
 function getTransformedCroppingPointsMatrix(croppingPoints, transformationMatrix) {
     var ret = [];
-    for(var i = 0; i < croppingPoints.length; i++) {
+    for (var i = 0; i < croppingPoints.length; i++) {
         var point = croppingPoints[i];
         var point2 = convertSingleKeypointToMatrix(point);
         var transformedPoint = applyTransformationMatToSingleKeypoint(point2, transformationMatrix);
@@ -687,12 +707,12 @@ function getTransformedCroppingPoints(croppingPoints, transformations) {
 
 function filterInvalidTriangles(triangles) {
     var ret = [];
-    for(var i = 0; i < triangles.length; i++) {
+    for (var i = 0; i < triangles.length; i++) {
         var triangle = triangles[i];
         //FIXME: THIS TRIANGLE FILERING STUFF IS JUNK!!! FIX IT
         var d1 = getEuclideanDistance(triangle[0], triangle[1]);
         var d2 = getEuclideanDistance(triangle[0], triangle[2]);
-        if(d1 > g_minPntDist
+        if (d1 > g_minPntDist
             && d1 < g_maxPntDist
             && d2 > g_minPntDist
             && d2 < g_maxPntDist
@@ -711,40 +731,46 @@ function draw() {
     var interactiveCanvasContext = document.getElementById('interactiveCanvas').getContext('2d');
     var referenceCanvasContext = document.getElementById('referenceCanvas').getContext('2d');
     var croppingPoints = getCroppingPoints();
-    var interactiveImageTransformations = getInteractiveImageTransformations();
     var transformationChanges = getTransformationChanges();
     interactiveCanvasContext.clearRect(0, 0, 512, 512); // clear canvas
     referenceCanvasContext.clearRect(0, 0, 512, 512); // clear canvas
 
-    var transformations = interactiveImageTransformations;
-    var scaleMatrix;
+    var interactiveImageTransformations = getInteractiveImageTransformations();
+    var referenceImageTransformations = getInteractiveImageTransformations();
     if (g_isMouseDownAndClickedOnCanvas) {
-        transformations = applyChangesToTransformations(interactiveImageTransformations, transformationChanges);
+        if (g_currentActiveCanvasId == "interactiveCanvas") {
+            interactiveImageTransformations = applyChangesToTransformations(interactiveImageTransformations, transformationChanges);
+        } else {
+            referenceImageTransformations = applyChangesToTransformations(referenceImageTransformations, transformationChanges);
+        }
     }
 
-    drawBackgroupImageWithTransformations(interactiveCanvasContext, getBackgroundImage(), transformations);
-    drawBackgroupImage(referenceCanvasContext, getBackgroundImage());
+    drawBackgroupImageWithTransformations(interactiveCanvasContext, getBackgroundImage(), interactiveImageTransformations);
+    drawBackgroupImageWithTransformations(referenceCanvasContext, getBackgroundImage(), referenceImageTransformations);
     var keypoints = getKeypoints();
-    var transformedKeypoints = computeTransformedKeypoints(keypoints, transformations);
+    var transformedKeypoints = computeTransformedKeypoints(keypoints, interactiveImageTransformations);
 
     var transformedCroppingPoints1 = getTransformedCroppingPointsMatrix(croppingPoints, getCroppingPointsTransformationMatrix());
-    var transformedCroppingPoints2 = getTransformedCroppingPoints(transformedCroppingPoints1, transformations);
+    var transformedCroppingPoints2 = getTransformedCroppingPoints(transformedCroppingPoints1, interactiveImageTransformations);
 
     var filteredKeypoints = getVisableKeypoints(transformedKeypoints, {x: 512, y: 512}, transformedCroppingPoints2);
-    g_cachedFilteredKeypoints = filteredKeypoints;
-    if(g_shouldDrawKeypoints) {
+    g_cachedCalculatedInteractiveCanvasKeypoints = filteredKeypoints;
+    g_cachedCalculatedReferenceCanvasKeypoints = keypoints;
+    if (g_shouldDrawKeypoints) {
         drawKeypoints(referenceCanvasContext, keypoints);
         drawKeypoints(interactiveCanvasContext, filteredKeypoints);
     }
 
     var triangles = computeTriangles(filteredKeypoints);
-    var transformationMatrix = convertTransformationObjectToTransformationMatrix(transformations);
+    var transformationMatrix = convertTransformationObjectToTransformationMatrix(interactiveImageTransformations);
     var trianglesProjectedOntoReferenceCanvas = computeTransformedTrianglesWithMatrix(triangles, math.inv(transformationMatrix));
-    if(g_shouldDrawTriangles) {
+    if (g_shouldDrawTriangles) {
         filteredReferenceImageTriangles = filterInvalidTriangles(trianglesProjectedOntoReferenceCanvas);
         drawTriangles(referenceCanvasContext, filteredReferenceImageTriangles);
         drawTriangles(interactiveCanvasContext, triangles);
     }
+
+    $("#number_of_triangles_output").html("Number of triangles: " + triangles.length);
 
     drawCroppingPoints(interactiveCanvasContext, transformedCroppingPoints2);
 
@@ -779,18 +805,51 @@ $(document).mouseup(function (e) {
 });
 
 $("#interactiveCanvas").mousedown(function (e) {
+    if (g_currentActiveCanvasId != "interactiveCanvas") {
+        return;
+    }
+
     e.preventDefault();
     g_isMouseDownAndClickedOnCanvas = true;
     handleMouseDownOnCanvas(e);
 });
 
 $("#interactiveCanvas").mousemove(function (e) {
+    if (g_currentActiveCanvasId != "interactiveCanvas") {
+        return;
+    }
+
     if (g_isMouseDownAndClickedOnCanvas) {
         handleMouseMoveOnCanvas(e);
     }
 });
 
 $("#interactiveCanvas").mouseup(function (e) {
+    //ignore
+
+});
+
+$("#referenceCanvas").mousedown(function (e) {
+    if (g_currentActiveCanvasId != "referenceCanvas") {
+        return;
+    }
+
+    e.preventDefault();
+    g_isMouseDownAndClickedOnCanvas = true;
+    handleMouseDownOnCanvas(e);
+});
+
+$("#referenceCanvas").mousemove(function (e) {
+    if (g_currentActiveCanvasId != "referenceCanvas") {
+        return;
+    }
+
+    if (g_isMouseDownAndClickedOnCanvas) {
+        handleMouseMoveOnCanvas(e);
+    }
+});
+
+$("#referenceCanvas").mouseup(function (e) {
     //ignore
 });
 
@@ -832,7 +891,7 @@ function handleMouseUpNonUniformScale() {
 
 function handleMouseUpUniformScale() {
     var savedScale = g_interactiveImageTransformation.uniformScale;
-    g_interactiveImageTransformation.uniformScale = savedScale*g_transformationChanges.currentUniformScale;
+    g_interactiveImageTransformation.uniformScale = savedScale * g_transformationChanges.currentUniformScale;
 }
 
 function handleMouseUpRotate() {
@@ -1039,8 +1098,10 @@ function setCurrnetOperation(newState) {
 function init() {
     //g_dogImage.src = 'dog1_resize.jpg';
     g_dogImage.src = 'rick1.jpg';
-    g_keypoints = generateRandomKeypoints({x: g_dogImage.width, y: g_dogImage.height}, 100);
+    g_keypoints = generateRandomKeypoints({x: g_dogImage.width, y: g_dogImage.height}, 200);
     wipeTransformationChanges();
+    g_interactiveImageTransformation = getIdentityTransformations();
+    g_referenceImageTransformation = getIdentityTransformations();
     setCurrnetOperation(enum_TransformationOperation.TRANSLATE);
     window.requestAnimationFrame(draw);
 }
