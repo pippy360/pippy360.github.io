@@ -7,7 +7,7 @@
 
 const INTERACTIVE_CANVAS_ID = "interactiveCanvas";
 const REFERENCE_CANVAS_ID = "referenceCanvas";
-const NUMBER_OF_KEYPOINTS = 100;
+const NUMBER_OF_KEYPOINTS = 150;
 var g_shouldDrawTriangles = true;
 var g_shouldDrawKeypoints = true;
 
@@ -1216,5 +1216,12 @@ function init() {
     window.requestAnimationFrame(draw);
 }
 
-init();
+function loadImageAndInit() {
+    g_dogImage.src = 'rick1.jpg';
+    g_dogImage.onload = function() {
+        init();
+    };
+}
+
+loadImageAndInit();
 
