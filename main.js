@@ -1206,8 +1206,6 @@ function setCurrnetOperation(newState) {
 }
 
 function init() {
-    //g_dogImage.src = 'dog1_resize.jpg';
-    g_dogImage.src = 'rick1.jpg';
     g_keypoints = generateRandomKeypoints({x: g_dogImage.width, y: g_dogImage.height}, NUMBER_OF_KEYPOINTS);
     wipeTransformationChanges();
     g_interactiveImageTransformation = getIdentityTransformations();
@@ -1217,6 +1215,7 @@ function init() {
 }
 
 function loadImageAndInit() {
+    //g_dogImage.src = 'dog1_resize.jpg';
     g_dogImage.src = 'rick1.jpg';
     g_dogImage.onload = function() {
         init();
