@@ -4,6 +4,10 @@
 // #     # #      #    # #    # #    # #           # #   #    # #   #  #    #
 //  #####  ######  ####  #####  #    # ######       #    #    # #    #  ####
 //global vars
+
+const INTERACTIVE_CANVAS_ID = "interactiveCanvas";
+const REFERENCE_CANVAS_ID = "referenceCanvas";
+
 var g_shouldDrawTriangles = true;
 var g_shouldDrawKeypoints = true;
 
@@ -12,7 +16,7 @@ var g_minPntDist = 150;
 var g_minTriArea = 400;//11000;
 //var g_maxTriArea = 21000;
 
-var g_currentActiveCanvasId = "interactiveCanvas"
+var g_currentActiveCanvasId = INTERACTIVE_CANVAS_ID
 
 var g_isMouseDownAndClickedOnCanvas = false;
 
@@ -36,8 +40,8 @@ function toggleDrawKeypointsMode() {
     g_shouldDrawKeypoints = !g_shouldDrawKeypoints;
 }
 function toggleActiveCanvas() {
-    var id1 = "interactiveCanvas";
-    var id2 = "referenceCanvas";
+    var id1 = INTERACTIVE_CANVAS_ID;
+    var id2 = REFERENCE_CANVAS_ID;
     if (g_currentActiveCanvasId == id1) {
         g_currentActiveCanvasId = id2;
     } else {
@@ -88,7 +92,7 @@ var g_referenceImageTransformation;
 var g_interactiveImageTransformation;
 
 function getIdentityTransformations() {
-    return {
+    var ret = {
         rotationCenterPoint: {
             x: 1920 / 2,
             y: 1080 / 2
@@ -101,6 +105,15 @@ function getIdentityTransformations() {
             y: 0
         }
     };
+    return ret;
+}
+
+function getCurrentActiveTransformationObject() {
+    if(g_currentActiveCanvasId == INTERACTIVE_CANVAS_ID) {
+        return g_interactiveImageTransformation;
+    } else {
+        return g_referenceImageTransformation;
+    }
 }
 
 function getReferenceImageTransformations() {
@@ -705,10 +718,32 @@ function getTransformedCroppingPoints(croppingPoints, transformations) {
     return getTransformedCroppingPointsMatrix(croppingPoints, transformationMatrix);
 }
 
-function filterInvalidTriangles(triangles) {
+function isAnyPointsOutsideCanvas(triangle, canvasDimensions) {
+    for (var i = 0; i < triangle.length; i++) {
+        var point = triangle[i];
+        if (
+            point.x > canvasDimensions.x ||
+            point.x < 0 ||
+            point.y > canvasDimensions.y ||
+            point.y < 0 ) 
+        {
+            //invalid triangle
+            return true;
+        }
+    }
+    return false;
+}
+
+function filterInvalidTriangles(triangles, canvasDimensions) {
     var ret = [];
     for (var i = 0; i < triangles.length; i++) {
         var triangle = triangles[i];
+
+        if(isAnyPointsOutsideCanvas(triangle, canvasDimensions)) {
+            //Invalid triangle, ignore            
+            continue;
+        }
+
         //FIXME: THIS TRIANGLE FILERING STUFF IS JUNK!!! FIX IT
         var d1 = getEuclideanDistance(triangle[0], triangle[1]);
         var d2 = getEuclideanDistance(triangle[0], triangle[2]);
@@ -736,9 +771,9 @@ function draw() {
     referenceCanvasContext.clearRect(0, 0, 512, 512); // clear canvas
 
     var interactiveImageTransformations = getInteractiveImageTransformations();
-    var referenceImageTransformations = getInteractiveImageTransformations();
+    var referenceImageTransformations = getReferenceImageTransformations();
     if (g_isMouseDownAndClickedOnCanvas) {
-        if (g_currentActiveCanvasId == "interactiveCanvas") {
+        if (g_currentActiveCanvasId == INTERACTIVE_CANVAS_ID) {
             interactiveImageTransformations = applyChangesToTransformations(interactiveImageTransformations, transformationChanges);
         } else {
             referenceImageTransformations = applyChangesToTransformations(referenceImageTransformations, transformationChanges);
@@ -748,24 +783,26 @@ function draw() {
     drawBackgroupImageWithTransformations(interactiveCanvasContext, getBackgroundImage(), interactiveImageTransformations);
     drawBackgroupImageWithTransformations(referenceCanvasContext, getBackgroundImage(), referenceImageTransformations);
     var keypoints = getKeypoints();
-    var transformedKeypoints = computeTransformedKeypoints(keypoints, interactiveImageTransformations);
-
+    var interactiveImageTransformedKeypoints = computeTransformedKeypoints(keypoints, interactiveImageTransformations);
+    var referenceImageTransformedKeypoints = computeTransformedKeypoints(keypoints, referenceImageTransformations);
     var transformedCroppingPoints1 = getTransformedCroppingPointsMatrix(croppingPoints, getCroppingPointsTransformationMatrix());
     var transformedCroppingPoints2 = getTransformedCroppingPoints(transformedCroppingPoints1, interactiveImageTransformations);
 
-    var filteredKeypoints = getVisableKeypoints(transformedKeypoints, {x: 512, y: 512}, transformedCroppingPoints2);
+    var filteredKeypoints = getVisableKeypoints(interactiveImageTransformedKeypoints, {x: 512, y: 512}, transformedCroppingPoints2);
     g_cachedCalculatedInteractiveCanvasKeypoints = filteredKeypoints;
-    g_cachedCalculatedReferenceCanvasKeypoints = keypoints;
+    g_cachedCalculatedReferenceCanvasKeypoints = referenceImageTransformedKeypoints;
     if (g_shouldDrawKeypoints) {
-        drawKeypoints(referenceCanvasContext, keypoints);
+        drawKeypoints(referenceCanvasContext, referenceImageTransformedKeypoints);
         drawKeypoints(interactiveCanvasContext, filteredKeypoints);
     }
 
     var triangles = computeTriangles(filteredKeypoints);
     var transformationMatrix = convertTransformationObjectToTransformationMatrix(interactiveImageTransformations);
-    var trianglesProjectedOntoReferenceCanvas = computeTransformedTrianglesWithMatrix(triangles, math.inv(transformationMatrix));
+    var referenceImageTransformationsMat = convertTransformationObjectToTransformationMatrix(referenceImageTransformations);
+    var projectionMatrix = matrixMultiply(referenceImageTransformationsMat, math.inv(transformationMatrix))
+    var trianglesProjectedOntoReferenceCanvas = computeTransformedTrianglesWithMatrix(triangles, projectionMatrix, referenceImageTransformations);
     if (g_shouldDrawTriangles) {
-        filteredReferenceImageTriangles = filterInvalidTriangles(trianglesProjectedOntoReferenceCanvas);
+        filteredReferenceImageTriangles = filterInvalidTriangles(trianglesProjectedOntoReferenceCanvas, {x: 512, y: 512});
         drawTriangles(referenceCanvasContext, filteredReferenceImageTriangles);
         drawTriangles(interactiveCanvasContext, triangles);
     }
@@ -805,9 +842,7 @@ $(document).mouseup(function (e) {
 });
 
 $("#interactiveCanvas").mousedown(function (e) {
-    if (g_currentActiveCanvasId != "interactiveCanvas") {
-        return;
-    }
+    g_currentActiveCanvasId = INTERACTIVE_CANVAS_ID;
 
     e.preventDefault();
     g_isMouseDownAndClickedOnCanvas = true;
@@ -815,7 +850,7 @@ $("#interactiveCanvas").mousedown(function (e) {
 });
 
 $("#interactiveCanvas").mousemove(function (e) {
-    if (g_currentActiveCanvasId != "interactiveCanvas") {
+    if (g_currentActiveCanvasId != INTERACTIVE_CANVAS_ID) {
         return;
     }
 
@@ -830,9 +865,7 @@ $("#interactiveCanvas").mouseup(function (e) {
 });
 
 $("#referenceCanvas").mousedown(function (e) {
-    if (g_currentActiveCanvasId != "referenceCanvas") {
-        return;
-    }
+    g_currentActiveCanvasId = REFERENCE_CANVAS_ID;
 
     e.preventDefault();
     g_isMouseDownAndClickedOnCanvas = true;
@@ -840,10 +873,9 @@ $("#referenceCanvas").mousedown(function (e) {
 });
 
 $("#referenceCanvas").mousemove(function (e) {
-    if (g_currentActiveCanvasId != "referenceCanvas") {
+    if (g_currentActiveCanvasId != REFERENCE_CANVAS_ID) {
         return;
     }
-
     if (g_isMouseDownAndClickedOnCanvas) {
         handleMouseMoveOnCanvas(e);
     }
@@ -880,23 +912,23 @@ function getCurrentCanvasMousePosition(e) {
 function handleMouseUpTranslate(pageMousePosition) {
     var translateDelta = minusTwoPoints(g_transformationChanges.mouseDownPosition, pageMousePosition);
     g_transformationChanges.currentTranslate = translateDelta;
-    g_interactiveImageTransformation.translate = addTwoPoints(g_interactiveImageTransformation.translate, translateDelta);
+    getCurrentActiveTransformationObject().translate = addTwoPoints(getCurrentActiveTransformationObject().translate, translateDelta);
 }
 
 function handleMouseUpNonUniformScale() {
-    var savedScaleMatrix = g_interactiveImageTransformation.directionalScaleMatrix;
+    var savedScaleMatrix = getCurrentActiveTransformationObject().directionalScaleMatrix;
     var tempScaleMatrix = matrixMultiply(savedScaleMatrix, g_transformationChanges.currentDirectionalScaleMatrix);
-    g_interactiveImageTransformation.directionalScaleMatrix = tempScaleMatrix;
+    getCurrentActiveTransformationObject().directionalScaleMatrix = tempScaleMatrix;
 }
 
 function handleMouseUpUniformScale() {
-    var savedScale = g_interactiveImageTransformation.uniformScale;
-    g_interactiveImageTransformation.uniformScale = savedScale * g_transformationChanges.currentUniformScale;
+    var savedScale = getCurrentActiveTransformationObject().uniformScale;
+    getCurrentActiveTransformationObject().uniformScale = savedScale * g_transformationChanges.currentUniformScale;
 }
 
 function handleMouseUpRotate() {
-    var savedRotation = g_interactiveImageTransformation.rotation;
-    g_interactiveImageTransformation.rotation = savedRotation + g_transformationChanges.currentRotation;
+    var savedRotation = getCurrentActiveTransformationObject().rotation;
+    getCurrentActiveTransformationObject().rotation = savedRotation + g_transformationChanges.currentRotation;
 }
 
 function handleMouseUpCrop(mousePosition) {
