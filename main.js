@@ -11,8 +11,8 @@ const REFERENCE_CANVAS_ID = "referenceCanvas";
 var g_shouldDrawTriangles = true;
 var g_shouldDrawKeypoints = true;
 
-var g_maxPntDist = 200;
-var g_minPntDist = 150;
+var g_maxPntDist = 300;
+var g_minPntDist = 20;
 var g_minTriArea = 400;//11000;
 //var g_maxTriArea = 21000;
 
@@ -39,16 +39,7 @@ var g_cachedCalculatedInteractiveCanvasKeypoints = [];
 function toggleDrawKeypointsMode() {
     g_shouldDrawKeypoints = !g_shouldDrawKeypoints;
 }
-function toggleActiveCanvas() {
-    var id1 = INTERACTIVE_CANVAS_ID;
-    var id2 = REFERENCE_CANVAS_ID;
-    if (g_currentActiveCanvasId == id1) {
-        g_currentActiveCanvasId = id2;
-    } else {
-        g_currentActiveCanvasId = id1;
-    }
-    console.log(g_currentActiveCanvasId);
-}
+
 function toggleDrawTrianglesMode() {
     g_shouldDrawTriangles = !g_shouldDrawTriangles;
 }
