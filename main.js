@@ -7,14 +7,65 @@
 
 const INTERACTIVE_CANVAS_ID = "interactiveCanvas";
 const REFERENCE_CANVAS_ID = "referenceCanvas";
-
+const NUMBER_OF_KEYPOINTS = 100;
 var g_shouldDrawTriangles = true;
 var g_shouldDrawKeypoints = true;
 
-var g_maxPntDist = 300;
-var g_minPntDist = 20;
+var g_maxPntDist = 200;
+var g_minPntDist = 150;
 var g_minTriArea = 400;//11000;
 //var g_maxTriArea = 21000;
+
+var g_steps = [
+    {
+        minPntDist: 85,
+        maxPntDist: 90,
+        minTriArea: 30,
+        colour: [255, 255, 255],
+    },
+    {
+        minPntDist: 90,
+        maxPntDist: 100,
+        minTriArea: 30,
+        colour: [0, 0, 255],
+    },
+    {
+        minPntDist: 100,
+        maxPntDist: 150,
+        minTriArea: 30,
+        colour: [255, 0, 0],
+    },
+    {
+        minPntDist: 150,
+        maxPntDist: 200,
+        minTriArea: 30,
+        colour: [100, 250, 250],
+    },
+    {
+        minPntDist: 200,
+        maxPntDist: 250,
+        minTriArea: 30,
+        colour: [100, 255, 100],
+    },
+    {
+        minPntDist: 250,
+        maxPntDist: 300,
+        minTriArea: 30,
+        colour: [255, 255, 0],
+    },
+    {
+        minPntDist: 300,
+        maxPntDist: 350,
+        minTriArea: 30,
+        colour: [255, 200, 200],
+    },
+    {
+        minPntDist: 350,
+        maxPntDist: 400,
+        minTriArea: 30,
+        colour: [120, 250, 120],
+    },
+]
 
 var g_currentActiveCanvasId = INTERACTIVE_CANVAS_ID
 
@@ -100,7 +151,7 @@ function getIdentityTransformations() {
 }
 
 function getCurrentActiveTransformationObject() {
-    if(g_currentActiveCanvasId == INTERACTIVE_CANVAS_ID) {
+    if (g_currentActiveCanvasId == INTERACTIVE_CANVAS_ID) {
         return g_interactiveImageTransformation;
     } else {
         return g_referenceImageTransformation;
@@ -394,27 +445,32 @@ function getEuclideanDistance(point1, point2) {
     return Math.sqrt(a * a + b * b);
 }
 
-function filterValidPoints(headPoint, tailcombs) {
+function filterValidPoints(headPoint, tailcombs, maxPntDist, minPntDist) {
     var ret = [];
     for (var i = 0; i < tailcombs.length; i++) {
         var currPt = tailcombs[i];
-        if (getEuclideanDistance(currPt, headPoint) < g_maxPntDist && getEuclideanDistance(currPt, headPoint) > g_minPntDist) {
+        var dist = getEuclideanDistance(currPt, headPoint);
+        if (dist < maxPntDist && dist > minPntDist) {
             ret.push([currPt]);
         }
     }
     return ret;
 }
 
-function computeTriangles(inKeypoints) {
+function computeTriangles(inKeypoints, maxPntDist, minPntDist, minTriArea) {
     var ret = [];
     for (var i = 0; i < inKeypoints.length - 2; i++) {
         var keypoint = inKeypoints[i];
         var tail = inKeypoints.slice(i + 1);
-        var subsetOfValidPoints = filterValidPoints(keypoint, tail);
+        var subsetOfValidPoints = filterValidPoints(keypoint, tail, maxPntDist, minPntDist);
         var combs = k_combinations(subsetOfValidPoints, 2);
         for (var j = 0; j < combs.length; j++) {
             var currComb = combs[j];
             var tempTriangle = [keypoint, currComb[0][0], currComb[1][0]];
+            if (getArea(tempTriangle) < minTriArea) {
+                //invalid triangle ignore
+                continue;
+            }
             ret.push(tempTriangle);
         }
     }
@@ -545,14 +601,15 @@ function drawLineFromPointToMousePosition(ctx) {
 }
 
 function drawTriangleWithColour(ctx, tri, colour) {
-    var alpha = 0.9;
+    var alpha = 1.0;
     ctx.strokeStyle = 'rgba(' + colour[0] + ', ' + colour[1] + ' ,' + colour[2] + ', ' + alpha + ')';
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.09)';
     ctx.beginPath();
     ctx.moveTo(tri[0].x, tri[0].y);
     ctx.lineTo(tri[1].x, tri[1].y);
     ctx.lineTo(tri[2].x, tri[2].y);
     ctx.closePath();
+    ctx.fill();
     ctx.stroke();
 }
 
@@ -567,13 +624,25 @@ function drawKeypoints(interactiveCanvasContext, keypoints) {
     interactiveCanvasContext.stroke();
 }
 
-function drawTriangle(ctx, tri) {
-    drawTriangleWithColour(ctx, tri, [255, 255, 0]);
+function drawTriangle(ctx, tri, colour) {
+    drawTriangleWithColour(ctx, tri, colour);
 }
+
+function getColourForIndex(pointDistance) {
+    for (var i = 0; i < g_steps.length; i++) {
+        if (pointDistance > g_steps[i].minPntDist && pointDistance < g_steps[i].maxPntDist) {
+            return g_steps[i].colour;
+        }
+    }
+    console.log("Invalid colour/points distance")
+    return [0, 0, 0];
+}
+
 
 function drawTriangles(canvasContext, triangles) {
     for (var i = 0; i < triangles.length; i++) {
-        drawTriangle(canvasContext, triangles[i]);
+        var colour = getColourForIndex(getEuclideanDistance(triangles[i][0], triangles[i][1]));
+        drawTriangle(canvasContext, triangles[i], colour);
     }
 }
 
@@ -716,8 +785,7 @@ function isAnyPointsOutsideCanvas(triangle, canvasDimensions) {
             point.x > canvasDimensions.x ||
             point.x < 0 ||
             point.y > canvasDimensions.y ||
-            point.y < 0 ) 
-        {
+            point.y < 0) {
             //invalid triangle
             return true;
         }
@@ -725,12 +793,12 @@ function isAnyPointsOutsideCanvas(triangle, canvasDimensions) {
     return false;
 }
 
-function filterInvalidTriangles(triangles, canvasDimensions) {
+function filterInvalidTriangles(triangles, canvasDimensions, minPntDist, maxPntDist, minTriArea) {
     var ret = [];
     for (var i = 0; i < triangles.length; i++) {
         var triangle = triangles[i];
 
-        if(isAnyPointsOutsideCanvas(triangle, canvasDimensions)) {
+        if (isAnyPointsOutsideCanvas(triangle, canvasDimensions)) {
             //Invalid triangle, ignore            
             continue;
         }
@@ -738,11 +806,11 @@ function filterInvalidTriangles(triangles, canvasDimensions) {
         //FIXME: THIS TRIANGLE FILERING STUFF IS JUNK!!! FIX IT
         var d1 = getEuclideanDistance(triangle[0], triangle[1]);
         var d2 = getEuclideanDistance(triangle[0], triangle[2]);
-        if (d1 > g_minPntDist
-            && d1 < g_maxPntDist
-            && d2 > g_minPntDist
-            && d2 < g_maxPntDist
-            && getArea(triangle) > g_minTriArea
+        if (d1 > minPntDist
+            && d1 < maxPntDist
+            && d2 > minPntDist
+            && d2 < maxPntDist
+            && getArea(triangle) > minTriArea
         ) {
             ret.push(triangle)
         } else {
@@ -753,6 +821,7 @@ function filterInvalidTriangles(triangles, canvasDimensions) {
 }
 
 function draw() {
+
     //init variables
     var interactiveCanvasContext = document.getElementById('interactiveCanvas').getContext('2d');
     var referenceCanvasContext = document.getElementById('referenceCanvas').getContext('2d');
@@ -779,7 +848,10 @@ function draw() {
     var transformedCroppingPoints1 = getTransformedCroppingPointsMatrix(croppingPoints, getCroppingPointsTransformationMatrix());
     var transformedCroppingPoints2 = getTransformedCroppingPoints(transformedCroppingPoints1, interactiveImageTransformations);
 
-    var filteredKeypoints = getVisableKeypoints(interactiveImageTransformedKeypoints, {x: 512, y: 512}, transformedCroppingPoints2);
+    var filteredKeypoints = getVisableKeypoints(interactiveImageTransformedKeypoints, {
+        x: 512,
+        y: 512
+    }, transformedCroppingPoints2);
     g_cachedCalculatedInteractiveCanvasKeypoints = filteredKeypoints;
     g_cachedCalculatedReferenceCanvasKeypoints = referenceImageTransformedKeypoints;
     if (g_shouldDrawKeypoints) {
@@ -787,18 +859,33 @@ function draw() {
         drawKeypoints(interactiveCanvasContext, filteredKeypoints);
     }
 
-    var triangles = computeTriangles(filteredKeypoints);
-    var transformationMatrix = convertTransformationObjectToTransformationMatrix(interactiveImageTransformations);
-    var referenceImageTransformationsMat = convertTransformationObjectToTransformationMatrix(referenceImageTransformations);
-    var projectionMatrix = matrixMultiply(referenceImageTransformationsMat, math.inv(transformationMatrix))
-    var trianglesProjectedOntoReferenceCanvas = computeTransformedTrianglesWithMatrix(triangles, projectionMatrix, referenceImageTransformations);
+    var interactiveTrianglesForAllSteps = [];
     if (g_shouldDrawTriangles) {
-        filteredReferenceImageTriangles = filterInvalidTriangles(trianglesProjectedOntoReferenceCanvas, {x: 512, y: 512});
-        drawTriangles(referenceCanvasContext, filteredReferenceImageTriangles);
-        drawTriangles(interactiveCanvasContext, triangles);
+        for (var i = 0; i < g_steps.length; i++) {
+            var currentStep = g_steps[i];
+            var tempTriangles = computeTriangles(filteredKeypoints, currentStep.maxPntDist, currentStep.minPntDist, currentStep.minTriArea);
+            interactiveTrianglesForAllSteps = interactiveTrianglesForAllSteps.concat(tempTriangles);
+        }
+
+        var transformationMatrix = convertTransformationObjectToTransformationMatrix(interactiveImageTransformations);
+        var referenceImageTransformationsMat = convertTransformationObjectToTransformationMatrix(referenceImageTransformations);
+        var projectionMatrix = matrixMultiply(referenceImageTransformationsMat, math.inv(transformationMatrix))
+        var trianglesProjectedOntoReferenceCanvas = computeTransformedTrianglesWithMatrix(interactiveTrianglesForAllSteps, projectionMatrix, referenceImageTransformations);
+
+        var filteredReferenceImageTrianglesForAllSteps = [];
+        for (var i = 0; i < g_steps.length; i++) {
+            var currentStep = g_steps[i];
+            var tempFilteredReferenceImageTriangles = filterInvalidTriangles(trianglesProjectedOntoReferenceCanvas,
+                {x: 512, y: 512}, currentStep.minPntDist, currentStep.maxPntDist, currentStep.minTriArea);
+            filteredReferenceImageTrianglesForAllSteps = filteredReferenceImageTrianglesForAllSteps.concat(tempFilteredReferenceImageTriangles);
+        }
+
+        // var filteredReferenceImageTrianglesForAllSteps = trianglesProjectedOntoReferenceCanvas;
+        drawTriangles(referenceCanvasContext, filteredReferenceImageTrianglesForAllSteps);
+        drawTriangles(interactiveCanvasContext, interactiveTrianglesForAllSteps);
     }
 
-    $("#number_of_triangles_output").html("Number of triangles: " + triangles.length);
+    $("#number_of_triangles_output").html("Number of triangles: " + interactiveTrianglesForAllSteps.length);
 
     drawCroppingPoints(interactiveCanvasContext, transformedCroppingPoints2);
 
@@ -1121,7 +1208,7 @@ function setCurrnetOperation(newState) {
 function init() {
     //g_dogImage.src = 'dog1_resize.jpg';
     g_dogImage.src = 'rick1.jpg';
-    g_keypoints = generateRandomKeypoints({x: g_dogImage.width, y: g_dogImage.height}, 200);
+    g_keypoints = generateRandomKeypoints({x: g_dogImage.width, y: g_dogImage.height}, NUMBER_OF_KEYPOINTS);
     wipeTransformationChanges();
     g_interactiveImageTransformation = getIdentityTransformations();
     g_referenceImageTransformation = getIdentityTransformations();
