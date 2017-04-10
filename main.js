@@ -141,11 +141,19 @@ function getIdentityTransformations() {
     return ret;
 }
 
-function getCurrentActiveTransformationObject() {
+function getCurrentActiveTransformationMatrix() {
     if (g_currentActiveCanvasId == INTERACTIVE_CANVAS_ID) {
         return g_interactiveImageTransformation;
     } else {
         return g_referenceImageTransformation;
+    }
+}
+
+function applyTransformationToCurrentActiveTransformationMatrix(result) {
+    if (g_currentActiveCanvasId == INTERACTIVE_CANVAS_ID) {
+        g_interactiveImageTransformation = matrixMultiply(result, g_interactiveImageTransformation);
+    } else {
+        g_referenceImageTransformation = matrixMultiply(result, g_referenceImageTransformation);
     }
 }
 
@@ -753,9 +761,6 @@ function draw() {
 
     var interactiveImageTransformations = getInteractiveImageTransformations();
     var referenceImageTransformations = getReferenceImageTransformations();
-
-    var interactiveImageTransformations = convertTransformationObjectToTransformationMatrix(interactiveImageTransformations);
-    var referenceImageTransformations = convertTransformationObjectToTransformationMatrix(referenceImageTransformations);
     var transformationChangesMatrix = convertTransformationObjectToTransformationMatrix(transformationChanges);
     if (g_isMouseDownAndClickedOnCanvas) {
         if (g_currentActiveCanvasId == INTERACTIVE_CANVAS_ID) {
@@ -913,24 +918,23 @@ function getCurrentCanvasMousePosition(e) {
 
 function handleMouseUpTranslate(pageMousePosition) {
     var translateDelta = minusTwoPoints(g_pageMouseDownPosition, pageMousePosition);
-    g_transformationChanges.translate = translateDelta;
-    getCurrentActiveTransformationObject().translate = addTwoPoints(getCurrentActiveTransformationObject().translate, translateDelta);
+    applyTransformationToCurrentActiveTransformationMatrix(getTranslateMatrix(-translateDelta.x, -translateDelta.y));
 }
 
 function handleMouseUpNonUniformScale() {
-    var savedScaleMatrix = getCurrentActiveTransformationObject().directionalScaleMatrix;
-    var tempScaleMatrix = matrixMultiply(savedScaleMatrix, g_transformationChanges.directionalScaleMatrix);
-    getCurrentActiveTransformationObject().directionalScaleMatrix = tempScaleMatrix;
+    var mat = g_transformationChanges.directionalScaleMatrix;
+    var result = matrixMultiply(getCurrentActiveTransformationMatrix(), mat);
+    applyTransformationToCurrentActiveTransformationMatrix(result);
 }
 
 function handleMouseUpUniformScale() {
-    var savedScale = getCurrentActiveTransformationObject().uniformScale;
-    getCurrentActiveTransformationObject().uniformScale = savedScale * g_transformationChanges.uniformScale;
+    //var savedScale = getCurrentActiveTransformationMatrix().uniformScale;
+    var scale = g_transformationChanges.uniformScale;
+    applyTransformationToCurrentActiveTransformationMatrix(getScaleMatrix(scale, scale));
 }
 
 function handleMouseUpRotate() {
-    var savedRotation = getCurrentActiveTransformationObject().rotation;
-    getCurrentActiveTransformationObject().rotation = savedRotation + g_transformationChanges.rotation;
+    applyTransformationToCurrentActiveTransformationMatrix(getRotatoinMatrix(-g_transformationChanges.rotation));
 }
 
 function handleMouseUpCrop(mousePosition) {
@@ -1133,8 +1137,8 @@ function setCurrnetOperation(newState) {
 function init() {
     g_keypoints = generateRandomKeypoints({x: g_dogImage.width, y: g_dogImage.height}, NUMBER_OF_KEYPOINTS);
     wipeTransformationChanges();
-    g_interactiveImageTransformation = getIdentityTransformations();
-    g_referenceImageTransformation = getIdentityTransformations();
+    g_interactiveImageTransformation = getIdentityMatrix();
+    g_referenceImageTransformation = getIdentityMatrix();
     setCurrnetOperation(enum_TransformationOperation.TRANSLATE);
     window.requestAnimationFrame(draw);
 }
