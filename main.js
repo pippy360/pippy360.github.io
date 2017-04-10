@@ -771,9 +771,9 @@ function draw() {
     var transformationChangesMatrix = convertTransformationObjectToTransformationMatrix(transformationChanges);
 
     if (g_currentActiveCanvasId == INTERACTIVE_CANVAS_ID) {
-        interactiveImageTransformations = matrixMultiply(interactiveImageTransformations, transformationChangesMatrix);
+        interactiveImageTransformations = matrixMultiply(transformationChangesMatrix, interactiveImageTransformations);
     } else {
-        referenceImageTransformations = matrixMultiply(referenceImageTransformations, transformationChangesMatrix);
+        referenceImageTransformations = matrixMultiply(transformationChangesMatrix, referenceImageTransformations);
     }
 
     drawBackgroudImageWithTransformationMatrix(interactiveCanvasContext, getBackgroundImage(), interactiveImageTransformations);
