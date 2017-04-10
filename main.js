@@ -324,19 +324,19 @@ function convertTransformationObjectToTransformationMatrix(transformations) {
     //Translate
     ret = matrixMultiply(ret, getTranslateMatrix(-transformations.translate.x, -transformations.translate.y));
 
-    ret = matrixMultiply(ret, getTranslateMatrix(transformationCenterPoint.x, transformationCenterPoint.y));
+    // ret = matrixMultiply(ret, getTranslateMatrix(transformationCenterPoint.x, transformationCenterPoint.y));
     ret = matrixMultiply(ret, getScaleMatrix(transformations.uniformScale, transformations.uniformScale));
-    ret = matrixMultiply(ret, getTranslateMatrix(-transformationCenterPoint.x, -transformationCenterPoint.y));
+    // ret = matrixMultiply(ret, getTranslateMatrix(-transformationCenterPoint.x, -transformationCenterPoint.y));
 
     //Rotate
-    ret = matrixMultiply(ret, getTranslateMatrix(transformationCenterPoint.x, transformationCenterPoint.y));
+    // ret = matrixMultiply(ret, getTranslateMatrix(transformationCenterPoint.x, transformationCenterPoint.y));
     ret = matrixMultiply(ret, getRotatoinMatrix(-transformations.rotation));
-    ret = matrixMultiply(ret, getTranslateMatrix(-transformationCenterPoint.x, -transformationCenterPoint.y));
+    // ret = matrixMultiply(ret, getTranslateMatrix(-transformationCenterPoint.x, -transformationCenterPoint.y));
 
     //Scale
-    ret = matrixMultiply(ret, getTranslateMatrix(transformationCenterPoint.x, transformationCenterPoint.y));
+    // ret = matrixMultiply(ret, getTranslateMatrix(transformationCenterPoint.x, transformationCenterPoint.y));
     ret = matrixMultiply(ret, transformations.directionalScaleMatrix);
-    ret = matrixMultiply(ret, getTranslateMatrix(-transformationCenterPoint.x, -transformationCenterPoint.y));
+    // ret = matrixMultiply(ret, getTranslateMatrix(-transformationCenterPoint.x, -transformationCenterPoint.y));
 
     return ret;
 }
@@ -769,11 +769,12 @@ function draw() {
     var interactiveImageTransformations = convertTransformationObjectToTransformationMatrix(interactiveImageTransformations);
     var referenceImageTransformations = convertTransformationObjectToTransformationMatrix(referenceImageTransformations);
     var transformationChangesMatrix = convertTransformationObjectToTransformationMatrix(transformationChanges);
-
-    if (g_currentActiveCanvasId == INTERACTIVE_CANVAS_ID) {
-        interactiveImageTransformations = matrixMultiply(transformationChangesMatrix, interactiveImageTransformations);
-    } else {
-        referenceImageTransformations = matrixMultiply(transformationChangesMatrix, referenceImageTransformations);
+    if (g_isMouseDownAndClickedOnCanvas) {
+        if (g_currentActiveCanvasId == INTERACTIVE_CANVAS_ID) {
+            interactiveImageTransformations = matrixMultiply(transformationChangesMatrix, interactiveImageTransformations);
+        } else {
+            referenceImageTransformations = matrixMultiply(transformationChangesMatrix, referenceImageTransformations);
+        }
     }
 
     drawBackgroudImageWithTransformationMatrix(interactiveCanvasContext, getBackgroundImage(), interactiveImageTransformations);
