@@ -917,24 +917,23 @@ function getCurrentCanvasMousePosition(e) {
 }
 
 function handleMouseUpTranslate(pageMousePosition) {
-    var translateDelta = minusTwoPoints(g_pageMouseDownPosition, pageMousePosition);
-    applyTransformationToCurrentActiveTransformationMatrix(getTranslateMatrix(-translateDelta.x, -translateDelta.y));
+    var result = convertTransformationObjectToTransformationMatrix(g_transformationChanges);
+    applyTransformationToCurrentActiveTransformationMatrix(result);
 }
 
 function handleMouseUpNonUniformScale() {
-    var mat = g_transformationChanges.directionalScaleMatrix;
-    var result = matrixMultiply(getCurrentActiveTransformationMatrix(), mat);
+    var result = convertTransformationObjectToTransformationMatrix(g_transformationChanges);
     applyTransformationToCurrentActiveTransformationMatrix(result);
 }
 
 function handleMouseUpUniformScale() {
-    //var savedScale = getCurrentActiveTransformationMatrix().uniformScale;
-    var scale = g_transformationChanges.uniformScale;
-    applyTransformationToCurrentActiveTransformationMatrix(getScaleMatrix(scale, scale));
+    var result = convertTransformationObjectToTransformationMatrix(g_transformationChanges);
+    applyTransformationToCurrentActiveTransformationMatrix(result);
 }
 
 function handleMouseUpRotate() {
-    applyTransformationToCurrentActiveTransformationMatrix(getRotatoinMatrix(-g_transformationChanges.rotation));
+    var result = convertTransformationObjectToTransformationMatrix(g_transformationChanges);
+    applyTransformationToCurrentActiveTransformationMatrix(result);
 }
 
 function handleMouseUpCrop(mousePosition) {
