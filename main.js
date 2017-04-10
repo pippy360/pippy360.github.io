@@ -13,12 +13,14 @@ const NUMBER_OF_KEYPOINTS = 150;
 var g_shouldDrawUIOverlay = true;
 var g_shouldDrawTriangles = true;
 var g_shouldDrawKeypoints = true;
-
-var g_maxPntDist = 200;
-var g_minPntDist = 150;
-var g_minTriArea = 400;//11000;
+var g_enableFillEffect = false;
+var g_highlightedTriangle = null;
+// var g_maxPntDist = 200;
+// var g_minPntDist = 150;
+// var g_minTriArea = 400;//11000;
 //var g_maxTriArea = 21000;
-
+var redrawRequired = false;
+var g_skipListGen = false;//TODO: FIXME: remove this hack
 var g_steps = [
     {
         minPntDist: 85,
@@ -539,7 +541,22 @@ function k_combinations(set, k) {
 // #     # #####  ###### # ## #
 // #     # #   #  #    # ##  ##
 // #####   #    # #    # #    #
+//draw
 
+function highlightTriangle(x1, y1, x2, y2, x3, y3) {
+    g_highlightedTriangle = [
+        {x: x1, y: y1},
+        {x: x2, y: y2},
+        {x: x3, y: y3}
+    ];
+    g_skipListGen = true;
+    draw()
+    g_skipListGen = false;
+    var referenceCanvasContext = document.getElementById('referenceCanvas').getContext('2d');
+    g_enableFillEffect = true;
+    drawTriangleWithColour(referenceCanvasContext, g_highlightedTriangle, [255, 255, 255], [255, 0, 0])
+    g_enableFillEffect = false;
+}
 
 function drawBackgroudImageWithTransformationMatrix(canvasContext, image, transformationMat) {
     canvasContext.save();
@@ -563,16 +580,19 @@ function drawLineFromPointToMousePosition(ctx) {
     // ctx.restore();
 }
 
-function drawTriangleWithColour(ctx, tri, colour) {
+function drawTriangleWithColour(ctx, tri, strokeColour, fillColour) {
     var alpha = 1.0;
-    ctx.strokeStyle = 'rgba(' + colour[0] + ', ' + colour[1] + ' ,' + colour[2] + ', ' + alpha + ')';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.09)';
+    ctx.strokeStyle = 'rgba(' + strokeColour[0] + ', ' + strokeColour[1] + ' ,' + strokeColour[2] + ', ' + alpha + ')';
+    //ctx.fillStyle = 'rgba(255, 255, 255, 0.09)';
+    ctx.fillStyle = 'rgba(' + fillColour[0] + ', ' + fillColour[1] + ' ,' + fillColour[2] + ', ' + alpha + ')';
     ctx.beginPath();
     ctx.moveTo(tri[0].x, tri[0].y);
     ctx.lineTo(tri[1].x, tri[1].y);
     ctx.lineTo(tri[2].x, tri[2].y);
     ctx.closePath();
-    ctx.fill();
+    if (g_enableFillEffect) {
+        ctx.fill();
+    }
     ctx.stroke();
 }
 
@@ -588,7 +608,7 @@ function drawKeypoints(interactiveCanvasContext, keypoints) {
 }
 
 function drawTriangle(ctx, tri, colour) {
-    drawTriangleWithColour(ctx, tri, colour);
+    drawTriangleWithColour(ctx, tri, colour, colour);
 }
 
 function getColourForIndex(pointDistance) {
@@ -607,6 +627,7 @@ function drawTriangles(canvasContext, triangles) {
         var colour = getColourForIndex(getEuclideanDistance(triangles[i][0], triangles[i][1]));
         drawTriangle(canvasContext, triangles[i], colour);
     }
+    canvasContext.stroke();
 }
 
 function drawClosingPolygon(ctx, inPoints) {
@@ -801,6 +822,7 @@ function draw() {
         }
 
         var interactiveTrianglesForAllSteps = [];
+        var filteredReferenceImageTrianglesForAllSteps = [];
         if (g_shouldDrawTriangles) {
             for (var i = 0; i < g_steps.length; i++) {
                 var currentStep = g_steps[i];
@@ -811,7 +833,6 @@ function draw() {
             var projectionMatrix = matrixMultiply(referenceImageTransformations, math.inv(interactiveImageTransformations));
             var trianglesProjectedOntoReferenceCanvas = computeTransformedTrianglesWithMatrix(interactiveTrianglesForAllSteps, projectionMatrix);
 
-            var filteredReferenceImageTrianglesForAllSteps = [];
             for (var i = 0; i < g_steps.length; i++) {
                 var currentStep = g_steps[i];
                 var tempFilteredReferenceImageTriangles = filterInvalidTriangles(trianglesProjectedOntoReferenceCanvas,
@@ -823,11 +844,29 @@ function draw() {
             drawTriangles(referenceCanvasContext, filteredReferenceImageTrianglesForAllSteps);
             drawTriangles(interactiveCanvasContext, interactiveTrianglesForAllSteps);
         }
+        //add triangles to side bar
+
+        if (!g_skipListGen) {
+
+            $("#triangleOutputList").html("");
+            for (var i = 0; i < filteredReferenceImageTrianglesForAllSteps.length; i++) {
+                var triangle = filteredReferenceImageTrianglesForAllSteps[i];
+                var triangleString = triangle[0].x + ", " + triangle[0].y + ", " + triangle[1].x + ", " + triangle[1].y + ", " + triangle[2].x + ", " + triangle[2].y;
+                $("#triangleOutputList").append("<li class=\"list-group-item\" onmouseover=\"highlightTriangle(" + triangleString + ")\"><span>Triangle " + i + "</span><pre>&#9;</pre><span>Area=" + getArea(triangle) + " </span></li>");
+            }
+            $(".list-group-item").hover(function () {
+                    $(this).addClass("active");
+                },
+                function () {
+                    $(this).removeClass("active");
+                });
+        }
         $("#number_of_triangles_output").html("Number of triangles: " + interactiveTrianglesForAllSteps.length);
+        $("#number_of_matching_triangles_output").html("Number of Matching triangles: " + filteredReferenceImageTrianglesForAllSteps.length);
         drawCroppingPoints(interactiveCanvasContext, transformedCroppingPoints2);
     }
 
-    window.requestAnimationFrame(draw);
+    //window.requestAnimationFrame(draw);
 }
 
 // #     #                         ###
@@ -844,7 +883,9 @@ $(document).mousedown(function (e) {
 
 $(document).mousemove(function (e) {
     if (g_isMouseDownAndClickedOnCanvas) {
+        g_highlightedTriangle = null;
         handleMouseMoveOnDocument(e);
+        draw();
     }
 });
 
@@ -875,7 +916,6 @@ $("#interactiveCanvas").mousemove(function (e) {
 
 $("#interactiveCanvas").mouseup(function (e) {
     //ignore
-
 });
 
 $("#referenceCanvas").mousedown(function (e) {
@@ -1146,7 +1186,8 @@ function init() {
     g_interactiveImageTransformation = getIdentityMatrix();
     g_referenceImageTransformation = getIdentityMatrix();
     setCurrnetOperation(enum_TransformationOperation.TRANSLATE);
-    window.requestAnimationFrame(draw);
+    draw();
+    //window.requestAnimationFrame(draw);
 }
 
 function loadImageAndInit() {

@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
-      <script src="math.js" type="text/javascript"></script>
-      <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script src="math.js" type="text/javascript"></script>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css"
+          integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
     <style>
-        #bigBlueOuter{
+        #bigBlueOuter {
 
             -webkit-touch-callout: none;
             -webkit-user-select: none;
@@ -19,56 +20,86 @@
             -ms-user-select: none;
             user-select: none;
         }
-        .move { cursor: move; }
-        #lineSvgTag {
-            pointer-events:none;
+
+        .move {
+            cursor: move;
         }
-        .btn{
+
+        #lineSvgTag {
+            pointer-events: none;
+        }
+
+        .btn {
             font-size: 12px;
         }
+
+        #triangleOutputList {
+            max-width: 600px;
+            max-height: 400px;
+            overflow: auto;
+            margin-top: 20px;
+        }
+
     </style>
-  </head>
-  <body>
-    <div class="container">
-        <div>
-            <h1>Demo</h1>
-            <p>
-                <button id="transposeButton" class="btn btn-default active" onclick="setCurrnetOperation(enum_TransformationOperation.TRANSLATE)" >Move</button>
-                <button class="btn btn-default" onclick="setCurrnetOperation(enum_TransformationOperation.NON_UNIFORM_SCALE)" >Scale</button>
-                <button class="btn btn-default" onclick="setCurrnetOperation(enum_TransformationOperation.UNIFORM_SCALE)" >Uniform Scale</button>
-                <button class="btn btn-default" onclick="setCurrnetOperation(enum_TransformationOperation.ROTATE)" >Rotate</button>
-                <button class="btn btn-default" onclick="setCurrnetOperation(enum_TransformationOperation.CROP)" >Crop</button>
-                <button class="btn btn-default" onclick="toggleDrawUIOverlayMode()" >Toggle Draw Overlay</button>
-                <!--<button class="btn btn-default" onclick="toggleDrawKeypointsMode()" >Toggle DrawKeypoints</button>-->
-                <button class="btn btn-default" style="float:right;" onclick="callSearch()" >CompareImages</button>
-            </p>
-            <p>
-                Click and drag on the first image to apply a transformation.
-            </p>
-        </div>
-        <div id="bigBlueOuter" >
-            <canvas id="interactiveCanvas" width="512" height="512"></canvas>
-            <canvas id="referenceCanvas" width="512" height="512"></canvas>
-        </div>
-        <div id="output">
+</head>
+<body>
+<div class="container">
+    <div>
+        <h1>Demo</h1>
+        <p>
+            <button id="transposeButton" class="btn btn-default active"
+                    onclick="setCurrnetOperation(enum_TransformationOperation.TRANSLATE)">Move
+            </button>
+            <button class="btn btn-default"
+                    onclick="setCurrnetOperation(enum_TransformationOperation.NON_UNIFORM_SCALE)">Scale
+            </button>
+            <button class="btn btn-default" onclick="setCurrnetOperation(enum_TransformationOperation.UNIFORM_SCALE)">
+                Uniform Scale
+            </button>
+            <button class="btn btn-default" onclick="setCurrnetOperation(enum_TransformationOperation.ROTATE)">Rotate
+            </button>
+            <button class="btn btn-default" onclick="setCurrnetOperation(enum_TransformationOperation.CROP)">Crop
+            </button>
+            <button class="btn btn-default" onclick="toggleDrawUIOverlayMode()">Toggle Draw Overlay</button>
+            <!--<button class="btn btn-default" onclick="toggleDrawKeypointsMode()" >Toggle DrawKeypoints</button>-->
+            <button class="btn btn-default" style="float:right;" onclick="callSearch()">CompareImages</button>
+        </p>
+        <p>
+            Click and drag on the first image to apply a transformation.
+        </p>
+    </div>
+    <div id="bigBlueOuter">
+        <canvas id="interactiveCanvas" width="512" height="512"></canvas>
+        <canvas id="referenceCanvas" width="512" height="512"></canvas>
+    </div>
+    <div id="output">
             <span id="searchResultsOutput">
                 <div id="searchResultsOutputDiv" class="alert alert-success" role="alert">
                   <strong>Matched!</strong> X matches found
                 </div>
             </span>
-            <span id="number_of_triangles_output"></span>
-        </div>
+        <p id="number_of_triangles_output"></p>
+        <p id="number_of_matching_triangles_output"></p>
+        <ul id="triangleOutputList" class="list-group">
+            <li>This list should not be empty :(</li>
+        </ul>
     </div>
-    <svg id="lineSvgTag" style="display: inline;position: absolute; min-height: 4px;min-width: 4px;" >
-        <line id="line" x1="0" y1="0" x2="0" y2="0" style="stroke:rgb(255,0,0);stroke-width:2" />
-    </svg>
-    <!-- jQuery first, then Tether, then Bootstrap JS. -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
-    <script src="main.js"></script>
-
-  </body>
+</div>
+<svg id="lineSvgTag" style="display: inline;position: absolute; min-height: 4px;min-width: 4px;">
+    <line id="line" x1="0" y1="0" x2="0" y2="0" style="stroke:rgb(255,0,0);stroke-width:2"/>
+</svg>
+<!-- jQuery first, then Tether, then Bootstrap JS. -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js"
+        integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb"
+        crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js"
+        integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn"
+        crossorigin="anonymous"></script>
+<script src="main.js"></script>
+<script>
+</script>
+</body>
 <script>
 
 </script>
