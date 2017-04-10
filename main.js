@@ -10,6 +10,7 @@
 const INTERACTIVE_CANVAS_ID = "interactiveCanvas";
 const REFERENCE_CANVAS_ID = "referenceCanvas";
 const NUMBER_OF_KEYPOINTS = 150;
+var g_shouldDrawUIOverlay = true;
 var g_shouldDrawTriangles = true;
 var g_shouldDrawKeypoints = true;
 
@@ -88,6 +89,10 @@ var g_dogImage = new Image();
 var g_keypoints = [];
 var g_cachedCalculatedReferenceCanvasKeypoints = [];
 var g_cachedCalculatedInteractiveCanvasKeypoints = [];
+
+function toggleDrawUIOverlayMode() {
+    g_shouldDrawUIOverlay = !g_shouldDrawUIOverlay;
+}
 
 function toggleDrawKeypointsMode() {
     g_shouldDrawKeypoints = !g_shouldDrawKeypoints;
@@ -775,52 +780,52 @@ function draw() {
     drawBackgroudImageWithTransformationMatrix(interactiveCanvasContext, getBackgroundImage(), interactiveImageTransformations);
     drawBackgroudImageWithTransformationMatrix(referenceCanvasContext, getBackgroundImage(), referenceImageTransformations);
 
-    var keypoints = getKeypoints();
-    var interactiveImageTransformedKeypoints = computeTransformedKeypoints(keypoints, interactiveImageTransformations);
-    var referenceImageTransformedKeypoints = computeTransformedKeypoints(keypoints, referenceImageTransformations);
-    var transformedCroppingPoints1 = getTransformedCroppingPointsMatrix(croppingPoints, getCroppingPointsTransformationMatrix());
-    var transformedCroppingPoints2 = getTransformedCroppingPointsMatrix(transformedCroppingPoints1, interactiveImageTransformations);
+    if (g_shouldDrawUIOverlay) {
 
-    var filteredKeypoints = getVisableKeypoints(interactiveImageTransformedKeypoints, {
-        x: 512,
-        y: 512
-    }, transformedCroppingPoints2);
-    g_cachedCalculatedInteractiveCanvasKeypoints = filteredKeypoints;
-    g_cachedCalculatedReferenceCanvasKeypoints = referenceImageTransformedKeypoints;
-    if (g_shouldDrawKeypoints) {
-        drawKeypoints(referenceCanvasContext, referenceImageTransformedKeypoints);
-        drawKeypoints(interactiveCanvasContext, filteredKeypoints);
-    }
+        var keypoints = getKeypoints();
+        var interactiveImageTransformedKeypoints = computeTransformedKeypoints(keypoints, interactiveImageTransformations);
+        var referenceImageTransformedKeypoints = computeTransformedKeypoints(keypoints, referenceImageTransformations);
+        var transformedCroppingPoints1 = getTransformedCroppingPointsMatrix(croppingPoints, getCroppingPointsTransformationMatrix());
+        var transformedCroppingPoints2 = getTransformedCroppingPointsMatrix(transformedCroppingPoints1, interactiveImageTransformations);
 
-    var interactiveTrianglesForAllSteps = [];
-    if (g_shouldDrawTriangles) {
-        for (var i = 0; i < g_steps.length; i++) {
-            var currentStep = g_steps[i];
-            var tempTriangles = computeTriangles(filteredKeypoints, currentStep.maxPntDist, currentStep.minPntDist, currentStep.minTriArea);
-            interactiveTrianglesForAllSteps = interactiveTrianglesForAllSteps.concat(tempTriangles);
+        var filteredKeypoints = getVisableKeypoints(interactiveImageTransformedKeypoints, {
+            x: 512,
+            y: 512
+        }, transformedCroppingPoints2);
+
+        g_cachedCalculatedInteractiveCanvasKeypoints = filteredKeypoints;
+        g_cachedCalculatedReferenceCanvasKeypoints = referenceImageTransformedKeypoints;
+        if (g_shouldDrawKeypoints) {
+            drawKeypoints(referenceCanvasContext, referenceImageTransformedKeypoints);
+            drawKeypoints(interactiveCanvasContext, filteredKeypoints);
         }
 
-        var projectionMatrix = matrixMultiply(referenceImageTransformations, math.inv(interactiveImageTransformations));
-        var trianglesProjectedOntoReferenceCanvas = computeTransformedTrianglesWithMatrix(interactiveTrianglesForAllSteps, projectionMatrix);
+        var interactiveTrianglesForAllSteps = [];
+        if (g_shouldDrawTriangles) {
+            for (var i = 0; i < g_steps.length; i++) {
+                var currentStep = g_steps[i];
+                var tempTriangles = computeTriangles(filteredKeypoints, currentStep.maxPntDist, currentStep.minPntDist, currentStep.minTriArea);
+                interactiveTrianglesForAllSteps = interactiveTrianglesForAllSteps.concat(tempTriangles);
+            }
 
-        var filteredReferenceImageTrianglesForAllSteps = [];
-        for (var i = 0; i < g_steps.length; i++) {
-            var currentStep = g_steps[i];
-            var tempFilteredReferenceImageTriangles = filterInvalidTriangles(trianglesProjectedOntoReferenceCanvas,
-                {x: 512, y: 512}, currentStep.minPntDist, currentStep.maxPntDist, currentStep.minTriArea);
-            filteredReferenceImageTrianglesForAllSteps = filteredReferenceImageTrianglesForAllSteps.concat(tempFilteredReferenceImageTriangles);
+            var projectionMatrix = matrixMultiply(referenceImageTransformations, math.inv(interactiveImageTransformations));
+            var trianglesProjectedOntoReferenceCanvas = computeTransformedTrianglesWithMatrix(interactiveTrianglesForAllSteps, projectionMatrix);
+
+            var filteredReferenceImageTrianglesForAllSteps = [];
+            for (var i = 0; i < g_steps.length; i++) {
+                var currentStep = g_steps[i];
+                var tempFilteredReferenceImageTriangles = filterInvalidTriangles(trianglesProjectedOntoReferenceCanvas,
+                    {x: 512, y: 512}, currentStep.minPntDist, currentStep.maxPntDist, currentStep.minTriArea);
+                filteredReferenceImageTrianglesForAllSteps = filteredReferenceImageTrianglesForAllSteps.concat(tempFilteredReferenceImageTriangles);
+            }
+
+            // var filteredReferenceImageTrianglesForAllSteps = trianglesProjectedOntoReferenceCanvas;
+            drawTriangles(referenceCanvasContext, filteredReferenceImageTrianglesForAllSteps);
+            drawTriangles(interactiveCanvasContext, interactiveTrianglesForAllSteps);
         }
-
-        // var filteredReferenceImageTrianglesForAllSteps = trianglesProjectedOntoReferenceCanvas;
-        drawTriangles(referenceCanvasContext, filteredReferenceImageTrianglesForAllSteps);
-        drawTriangles(interactiveCanvasContext, interactiveTrianglesForAllSteps);
+        $("#number_of_triangles_output").html("Number of triangles: " + interactiveTrianglesForAllSteps.length);
+        drawCroppingPoints(interactiveCanvasContext, transformedCroppingPoints2);
     }
-
-    $("#number_of_triangles_output").html("Number of triangles: " + interactiveTrianglesForAllSteps.length);
-
-    drawCroppingPoints(interactiveCanvasContext, transformedCroppingPoints2);
-
-    //drawLineFromPointToMousePosition(referenceCanvasContext);
 
     window.requestAnimationFrame(draw);
 }
