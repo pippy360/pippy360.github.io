@@ -107,25 +107,13 @@ function getCroppingPointsTransformationMatrix() {
 
 var g_transformationChanges;//TODO: rename to something better
 
+var g_pageMouseDownPosition = {
+    x: 0,
+    y: 0
+};
+
 function wipeTransformationChanges() {
-    g_transformationChanges = {
-        transformationCenterPoint: {
-            x: 0,
-            y: 0
-        },
-        uniformScale: 1,
-        directionalScaleMatrix: getIdentityMatrix(),
-        rotation: 0,
-        translate: {
-            x: 0,
-            y: 0
-        },
-        //TODO: FIXME: extract this variable!!! to it's own global var
-        pageMouseDownPosition: {//value is only valid if g_isMouseDownAndClickedOnCanvas == true
-            X: 0,
-            Y: 0
-        }
-    };
+    g_transformationChanges = getIdentityTransformations();
 }
 
 function getTransformationChanges() {
@@ -924,7 +912,7 @@ function getCurrentCanvasMousePosition(e) {
 }
 
 function handleMouseUpTranslate(pageMousePosition) {
-    var translateDelta = minusTwoPoints(g_transformationChanges.pageMouseDownPosition, pageMousePosition);
+    var translateDelta = minusTwoPoints(g_pageMouseDownPosition, pageMousePosition);
     g_transformationChanges.translate = translateDelta;
     getCurrentActiveTransformationObject().translate = addTwoPoints(getCurrentActiveTransformationObject().translate, translateDelta);
 }
@@ -980,12 +968,12 @@ function handleMouseUp(e) {
 
 
 function handleMouseMoveTranslate(pageMousePosition) {
-    var translateDelta = minusTwoPoints(g_transformationChanges.pageMouseDownPosition, pageMousePosition);
+    var translateDelta = minusTwoPoints(g_pageMouseDownPosition, pageMousePosition);
     g_transformationChanges.translate = translateDelta;
 }
 
 function handleMouseMoveNonUniformScale(pageMousePosition) {
-    var mouseDownPoint = g_transformationChanges.pageMouseDownPosition;
+    var mouseDownPoint = g_pageMouseDownPosition;
     var y = (pageMousePosition.y - mouseDownPoint.y);
     var x = (pageMousePosition.x - mouseDownPoint.x);
 
@@ -1001,7 +989,7 @@ function handleMouseMoveNonUniformScale(pageMousePosition) {
 }
 
 function handleMouseMoveUniformScale(pageMousePosition) {
-    var mouseDownPoint = g_transformationChanges.pageMouseDownPosition;
+    var mouseDownPoint = g_pageMouseDownPosition;
     var y = (pageMousePosition.y - mouseDownPoint.y);
     var x = (pageMousePosition.x - mouseDownPoint.x);
 
@@ -1013,7 +1001,7 @@ function handleMouseMoveUniformScale(pageMousePosition) {
 }
 
 function handleMouseMoveRotate(pageMousePosition) {
-    var mouseDownPoint = g_transformationChanges.pageMouseDownPosition;
+    var mouseDownPoint = g_pageMouseDownPosition;
     var y = (pageMousePosition.y - mouseDownPoint.y);
     var x = (pageMousePosition.x - mouseDownPoint.x);
 
@@ -1105,7 +1093,7 @@ function handleMouseDownCrop(mousePosition) {
 function handleMouseDownOnCanvas(e) {
     var pageMousePosition = getCurrentPageMousePosition(e);
     var canvasMousePosition = getCurrentCanvasMousePosition(e);
-    g_transformationChanges.pageMouseDownPosition = pageMousePosition;
+    g_pageMouseDownPosition = pageMousePosition;
     g_transformationChanges.transformationCenterPoint = canvasMousePosition;
     switch (g_currentTranformationOperationState) {
         case enum_TransformationOperation.TRANSLATE:
