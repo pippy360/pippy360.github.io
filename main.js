@@ -1,5 +1,3 @@
-// #       #      #    # #    #  #  #  #         #     #  #  #  #    # #
-// #  #### #      #    # #####  #    # #         #     # #    # #    #  ####
 // #     # #      #    # #    # ###### #          #   #  ###### #####       #
 // #     # #      #    # #    # #    # #           # #   #    # #   #  #    #
 //  #####  ######  ####  #####  #    # ######       #    #    # #    #  ####
@@ -111,14 +109,19 @@ var g_transformationChanges;//TODO: rename to something better
 
 function wipeTransformationChanges() {
     g_transformationChanges = {
-        currentUniformScale: 1,
-        currentDirectionalScaleMatrix: getIdentityMatrix(),
-        currentRotation: 0,
-        currentTranslate: {
+        transformationCenterPoint: {
             x: 0,
             y: 0
         },
-        mouseDownPosition: {//value is only valid if g_isMouseDownAndClickedOnCanvas == true
+        uniformScale: 1,
+        directionalScaleMatrix: getIdentityMatrix(),
+        rotation: 0,
+        translate: {
+            x: 0,
+            y: 0
+        },
+        //TODO: FIXME: extract this variable!!! to it's own global var
+        pageMouseDownPosition: {//value is only valid if g_isMouseDownAndClickedOnCanvas == true
             X: 0,
             Y: 0
         }
@@ -135,7 +138,7 @@ var g_interactiveImageTransformation;
 
 function getIdentityTransformations() {
     var ret = {
-        rotationCenterPoint: {
+        transformationCenterPoint: {
             x: 1920 / 2,
             y: 1080 / 2
         },
@@ -314,26 +317,26 @@ function convertKeypointsToMatrixKeypoints(keypoints) {
 }
 
 function convertTransformationObjectToTransformationMatrix(transformations) {
-    var rotationCenterPoint = transformations.rotationCenterPoint;
+    var transformationCenterPoint = transformations.transformationCenterPoint;
     var ret = getIdentityMatrix();
 
 
     //Translate
     ret = matrixMultiply(ret, getTranslateMatrix(-transformations.translate.x, -transformations.translate.y));
 
-    ret = matrixMultiply(ret, getTranslateMatrix(rotationCenterPoint.x, rotationCenterPoint.y));
+    ret = matrixMultiply(ret, getTranslateMatrix(transformationCenterPoint.x, transformationCenterPoint.y));
     ret = matrixMultiply(ret, getScaleMatrix(transformations.uniformScale, transformations.uniformScale));
-    ret = matrixMultiply(ret, getTranslateMatrix(-rotationCenterPoint.x, -rotationCenterPoint.y));
+    ret = matrixMultiply(ret, getTranslateMatrix(-transformationCenterPoint.x, -transformationCenterPoint.y));
 
     //Rotate
-    ret = matrixMultiply(ret, getTranslateMatrix(rotationCenterPoint.x, rotationCenterPoint.y));
+    ret = matrixMultiply(ret, getTranslateMatrix(transformationCenterPoint.x, transformationCenterPoint.y));
     ret = matrixMultiply(ret, getRotatoinMatrix(-transformations.rotation));
-    ret = matrixMultiply(ret, getTranslateMatrix(-rotationCenterPoint.x, -rotationCenterPoint.y));
+    ret = matrixMultiply(ret, getTranslateMatrix(-transformationCenterPoint.x, -transformationCenterPoint.y));
 
     //Scale
-    ret = matrixMultiply(ret, getTranslateMatrix(rotationCenterPoint.x, rotationCenterPoint.y));
+    ret = matrixMultiply(ret, getTranslateMatrix(transformationCenterPoint.x, transformationCenterPoint.y));
     ret = matrixMultiply(ret, transformations.directionalScaleMatrix);
-    ret = matrixMultiply(ret, getTranslateMatrix(-rotationCenterPoint.x, -rotationCenterPoint.y));
+    ret = matrixMultiply(ret, getTranslateMatrix(-transformationCenterPoint.x, -transformationCenterPoint.y));
 
     return ret;
 }
@@ -366,12 +369,9 @@ function convertMatrixKeypointsToKeypointObjects(keypoints) {
     return ret;
 }
 
-function computeTransformedKeypoints(keypoints, transformations) {
+function computeTransformedKeypoints(keypoints, transformationMat) {
     //turn the keypoints into arrays with an extra 1 at the end. {x: 2, y: 3} ---> [[2],[3],[1]]
     var newKeypoints = convertKeypointsToMatrixKeypoints(keypoints);
-
-    //now calc the transformation mat
-    var transformationMat = convertTransformationObjectToTransformationMatrix(transformations);
 
     //then mult each keypoint
     var finalArrayKeypoints = applyTransformationMatrixToAllKeypoints(newKeypoints, transformationMat);
@@ -431,11 +431,6 @@ function computeTransformedTrianglesWithMatrix(triangles, transformationMatrix) 
         ret.push(temp);
     }
     return ret;
-}
-
-function computeTransformedTriangles(triangles, transformations) {
-    var convertedTransformations = convertTransformationObjectToTransformationMatrix(transformations);
-    return computeTransformedTrianglesWithMatrix(triangles, convertedTransformations);
 }
 
 function getEuclideanDistance(point1, point2) {
@@ -543,46 +538,11 @@ function k_combinations(set, k) {
 // #####   #    # #    # #    #
 
 
-function drawBackgroupImageWithTransformations(canvasContext, image, transformations) {
-
+function drawBackgroudImageWithTransformationMatrix(canvasContext, image, transformationMat) {
     canvasContext.save();
-
-    //Center image around {x: 0, y:0} so all transformations are apply from the center of the image
-    canvasContext.translate(image.width / 2, image.height / 2);
-
-    //
-    //Translate operation
-    //
-    var translation = transformations.translate;
-    canvasContext.translate(-translation.x, -translation.y);
-
-    //
-    //Scale operation
-    //
-    // canvasContext.translate(transformations.rotationCenterPoint.x, transformations.rotationCenterPoint.y);
-    canvasContext.scale(transformations.uniformScale, transformations.uniformScale);
-    // canvasContext.translate(-transformations.rotationCenterPoint.x, -transformations.rotationCenterPoint.y);
-
-
-    //
-    //Rotate operation around center point
-    //
-    // canvasContext.translate(transformations.rotationCenterPoint.x, transformations.rotationCenterPoint.y);
-    canvasContext.rotate(transformations.rotation * Math.PI / 180.0 * -1.0);
-    // canvasContext.translate(-transformations.rotationCenterPoint.x, -transformations.rotationCenterPoint.y);
-
-    //
-    //scale in a given direction
-    //
-    var mat = transformations.directionalScaleMatrix;
-    // canvasContext.translate(transformations.rotationCenterPoint.x, transformations.rotationCenterPoint.y);
+    var mat = transformationMat;
     canvasContext.transform(mat[0][0], mat[1][0], mat[0][1], mat[1][1], mat[0][2], mat[1][2]);
-    // canvasContext.translate(-transformations.rotationCenterPoint.x, -transformations.rotationCenterPoint.y);
-
-
-    canvasContext.translate(-image.width / 2, -image.height / 2);//bring the image back to it's original position
-    canvasContext.drawImage(image, 0, 0)//, 512/2, 512/2);
-
+    canvasContext.drawImage(image, 0, 0);
     canvasContext.restore();
 }
 
@@ -739,28 +699,6 @@ function getVisableKeypoints(keypoints, canvasDimensions, croppingPolygon) {
     return result;
 }
 
-function applyChangesToTransformations(interactiveImageTransformations, transformationChanges) {
-
-    var translateSaved = interactiveImageTransformations.translate;
-    var translateChange = transformationChanges.currentTranslate;
-    var savedRotation = interactiveImageTransformations.rotation;
-    var currentRotation = transformationChanges.currentRotation;
-    var savedScaleMatrix = interactiveImageTransformations.directionalScaleMatrix;
-    var currentScaleMatrix = transformationChanges.currentDirectionalScaleMatrix;
-    var savedUniformScale = interactiveImageTransformations.uniformScale;
-    var currentUniformScale = transformationChanges.currentUniformScale;
-    return {
-        rotationCenterPoint: interactiveImageTransformations.rotationCenterPoint,
-        directionalScaleMatrix: matrixMultiply(savedScaleMatrix, currentScaleMatrix),
-        uniformScale: savedUniformScale * currentUniformScale,
-        rotation: currentRotation + savedRotation,
-        translate: {
-            x: translateSaved.x + translateChange.x,
-            y: translateSaved.y + translateChange.y
-        }
-    }
-}
-
 function getTransformedCroppingPointsMatrix(croppingPoints, transformationMatrix) {
     var ret = [];
     for (var i = 0; i < croppingPoints.length; i++) {
@@ -771,11 +709,6 @@ function getTransformedCroppingPointsMatrix(croppingPoints, transformationMatrix
         ret.push(point3);
     }
     return ret;
-}
-
-function getTransformedCroppingPoints(croppingPoints, transformations) {
-    var transformationMatrix = convertTransformationObjectToTransformationMatrix(transformations);
-    return getTransformedCroppingPointsMatrix(croppingPoints, transformationMatrix);
 }
 
 function isAnyPointsOutsideCanvas(triangle, canvasDimensions) {
@@ -832,21 +765,25 @@ function draw() {
 
     var interactiveImageTransformations = getInteractiveImageTransformations();
     var referenceImageTransformations = getReferenceImageTransformations();
-    if (g_isMouseDownAndClickedOnCanvas) {
-        if (g_currentActiveCanvasId == INTERACTIVE_CANVAS_ID) {
-            interactiveImageTransformations = applyChangesToTransformations(interactiveImageTransformations, transformationChanges);
-        } else {
-            referenceImageTransformations = applyChangesToTransformations(referenceImageTransformations, transformationChanges);
-        }
+
+    var interactiveImageTransformations = convertTransformationObjectToTransformationMatrix(interactiveImageTransformations);
+    var referenceImageTransformations = convertTransformationObjectToTransformationMatrix(referenceImageTransformations);
+    var transformationChangesMatrix = convertTransformationObjectToTransformationMatrix(transformationChanges);
+
+    if (g_currentActiveCanvasId == INTERACTIVE_CANVAS_ID) {
+        interactiveImageTransformations = matrixMultiply(interactiveImageTransformations, transformationChangesMatrix);
+    } else {
+        referenceImageTransformations = matrixMultiply(referenceImageTransformations, transformationChangesMatrix);
     }
 
-    drawBackgroupImageWithTransformations(interactiveCanvasContext, getBackgroundImage(), interactiveImageTransformations);
-    drawBackgroupImageWithTransformations(referenceCanvasContext, getBackgroundImage(), referenceImageTransformations);
+    drawBackgroudImageWithTransformationMatrix(interactiveCanvasContext, getBackgroundImage(), interactiveImageTransformations);
+    drawBackgroudImageWithTransformationMatrix(referenceCanvasContext, getBackgroundImage(), referenceImageTransformations);
+
     var keypoints = getKeypoints();
     var interactiveImageTransformedKeypoints = computeTransformedKeypoints(keypoints, interactiveImageTransformations);
     var referenceImageTransformedKeypoints = computeTransformedKeypoints(keypoints, referenceImageTransformations);
     var transformedCroppingPoints1 = getTransformedCroppingPointsMatrix(croppingPoints, getCroppingPointsTransformationMatrix());
-    var transformedCroppingPoints2 = getTransformedCroppingPoints(transformedCroppingPoints1, interactiveImageTransformations);
+    var transformedCroppingPoints2 = getTransformedCroppingPointsMatrix(transformedCroppingPoints1, interactiveImageTransformations);
 
     var filteredKeypoints = getVisableKeypoints(interactiveImageTransformedKeypoints, {
         x: 512,
@@ -867,10 +804,8 @@ function draw() {
             interactiveTrianglesForAllSteps = interactiveTrianglesForAllSteps.concat(tempTriangles);
         }
 
-        var transformationMatrix = convertTransformationObjectToTransformationMatrix(interactiveImageTransformations);
-        var referenceImageTransformationsMat = convertTransformationObjectToTransformationMatrix(referenceImageTransformations);
-        var projectionMatrix = matrixMultiply(referenceImageTransformationsMat, math.inv(transformationMatrix))
-        var trianglesProjectedOntoReferenceCanvas = computeTransformedTrianglesWithMatrix(interactiveTrianglesForAllSteps, projectionMatrix, referenceImageTransformations);
+        var projectionMatrix = matrixMultiply(referenceImageTransformations, math.inv(interactiveImageTransformations));
+        var trianglesProjectedOntoReferenceCanvas = computeTransformedTrianglesWithMatrix(interactiveTrianglesForAllSteps, projectionMatrix);
 
         var filteredReferenceImageTrianglesForAllSteps = [];
         for (var i = 0; i < g_steps.length; i++) {
@@ -988,25 +923,25 @@ function getCurrentCanvasMousePosition(e) {
 }
 
 function handleMouseUpTranslate(pageMousePosition) {
-    var translateDelta = minusTwoPoints(g_transformationChanges.mouseDownPosition, pageMousePosition);
-    g_transformationChanges.currentTranslate = translateDelta;
+    var translateDelta = minusTwoPoints(g_transformationChanges.pageMouseDownPosition, pageMousePosition);
+    g_transformationChanges.translate = translateDelta;
     getCurrentActiveTransformationObject().translate = addTwoPoints(getCurrentActiveTransformationObject().translate, translateDelta);
 }
 
 function handleMouseUpNonUniformScale() {
     var savedScaleMatrix = getCurrentActiveTransformationObject().directionalScaleMatrix;
-    var tempScaleMatrix = matrixMultiply(savedScaleMatrix, g_transformationChanges.currentDirectionalScaleMatrix);
+    var tempScaleMatrix = matrixMultiply(savedScaleMatrix, g_transformationChanges.directionalScaleMatrix);
     getCurrentActiveTransformationObject().directionalScaleMatrix = tempScaleMatrix;
 }
 
 function handleMouseUpUniformScale() {
     var savedScale = getCurrentActiveTransformationObject().uniformScale;
-    getCurrentActiveTransformationObject().uniformScale = savedScale * g_transformationChanges.currentUniformScale;
+    getCurrentActiveTransformationObject().uniformScale = savedScale * g_transformationChanges.uniformScale;
 }
 
 function handleMouseUpRotate() {
     var savedRotation = getCurrentActiveTransformationObject().rotation;
-    getCurrentActiveTransformationObject().rotation = savedRotation + g_transformationChanges.currentRotation;
+    getCurrentActiveTransformationObject().rotation = savedRotation + g_transformationChanges.rotation;
 }
 
 function handleMouseUpCrop(mousePosition) {
@@ -1044,12 +979,12 @@ function handleMouseUp(e) {
 
 
 function handleMouseMoveTranslate(pageMousePosition) {
-    var translateDelta = minusTwoPoints(g_transformationChanges.mouseDownPosition, pageMousePosition);
-    g_transformationChanges.currentTranslate = translateDelta;
+    var translateDelta = minusTwoPoints(g_transformationChanges.pageMouseDownPosition, pageMousePosition);
+    g_transformationChanges.translate = translateDelta;
 }
 
 function handleMouseMoveNonUniformScale(pageMousePosition) {
-    var mouseDownPoint = g_transformationChanges.mouseDownPosition;
+    var mouseDownPoint = g_transformationChanges.pageMouseDownPosition;
     var y = (pageMousePosition.y - mouseDownPoint.y);
     var x = (pageMousePosition.x - mouseDownPoint.x);
 
@@ -1061,11 +996,11 @@ function handleMouseMoveNonUniformScale(pageMousePosition) {
     scale = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
     scale /= 100;
     scaleMatrix = getDirectionalScaleMatrix(Math.sqrt(scale), 1 / Math.sqrt(scale), -direction);
-    g_transformationChanges.currentDirectionalScaleMatrix = scaleMatrix;
+    g_transformationChanges.directionalScaleMatrix = scaleMatrix;
 }
 
 function handleMouseMoveUniformScale(pageMousePosition) {
-    var mouseDownPoint = g_transformationChanges.mouseDownPosition;
+    var mouseDownPoint = g_transformationChanges.pageMouseDownPosition;
     var y = (pageMousePosition.y - mouseDownPoint.y);
     var x = (pageMousePosition.x - mouseDownPoint.x);
 
@@ -1073,11 +1008,11 @@ function handleMouseMoveUniformScale(pageMousePosition) {
     scale /= 100;
     if (scale < .1)
         scale = .1;
-    g_transformationChanges.currentUniformScale = scale;
+    g_transformationChanges.uniformScale = scale;
 }
 
 function handleMouseMoveRotate(pageMousePosition) {
-    var mouseDownPoint = g_transformationChanges.mouseDownPosition;
+    var mouseDownPoint = g_transformationChanges.pageMouseDownPosition;
     var y = (pageMousePosition.y - mouseDownPoint.y);
     var x = (pageMousePosition.x - mouseDownPoint.x);
 
@@ -1086,7 +1021,7 @@ function handleMouseMoveRotate(pageMousePosition) {
         extraRotation = (360 + (extraRotation));
     }
     extraRotation = extraRotation % 360;
-    g_transformationChanges.currentRotation = extraRotation;
+    g_transformationChanges.rotation = extraRotation;
 }
 
 function handleMouseMoveCrop(mousePosition) {
@@ -1161,7 +1096,7 @@ function handleMouseDownRotate(pageMousePosition) {
 
 function handleMouseDownCrop(mousePosition) {
     g_croppingPolygonPoints = [];
-    var tempMat = convertTransformationObjectToTransformationMatrix(g_interactiveImageTransformation)
+    var tempMat = convertTransformationObjectToTransformationMatrix(g_interactiveImageTransformation);
     g_croppingPolygonInverseMatrix = math.inv(tempMat);
     //g_croppingPolygonPoints.push(mousePosition);
 }
@@ -1169,7 +1104,8 @@ function handleMouseDownCrop(mousePosition) {
 function handleMouseDownOnCanvas(e) {
     var pageMousePosition = getCurrentPageMousePosition(e);
     var canvasMousePosition = getCurrentCanvasMousePosition(e);
-    g_transformationChanges.mouseDownPosition = pageMousePosition;
+    g_transformationChanges.pageMouseDownPosition = pageMousePosition;
+    g_transformationChanges.transformationCenterPoint = canvasMousePosition;
     switch (g_currentTranformationOperationState) {
         case enum_TransformationOperation.TRANSLATE:
             handleMouseDownTranslate(pageMousePosition);
@@ -1217,7 +1153,7 @@ function init() {
 function loadImageAndInit() {
     //g_dogImage.src = 'dog1_resize.jpg';
     g_dogImage.src = 'rick1.jpg';
-    g_dogImage.onload = function() {
+    g_dogImage.onload = function () {
         init();
     };
 }
