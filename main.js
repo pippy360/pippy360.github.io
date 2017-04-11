@@ -85,8 +85,10 @@ var enum_TransformationOperation = {
 };
 var g_currentTranformationOperationState = enum_TransformationOperation.TRANSPOSE;
 
-var g_croppingPolygonPoints = [];
-var g_croppingPolygonInverseMatrix = getIdentityMatrix();//the inverse of the transformations applied at the time of drawing
+var g_interactiveCanvasCroppingPolygonPoints = [];
+var g_referenceCanvasCroppingPolygonPoints = [];
+var g_interactiveCanvasCroppingPolygonInverseMatrix = getIdentityMatrix();//the inverse of the transformations applied at the time of drawing
+var g_referenceCanvasCroppingPolygonInverseMatrix = getIdentityMatrix();//the inverse of the transformations applied at the time of drawing
 var g_dogImage = new Image();
 var g_keypoints = [];
 var g_cachedCalculatedReferenceCanvasKeypoints = [];
@@ -108,12 +110,8 @@ function getBackgroundImage() {
     return g_dogImage;
 }
 
-function getCroppingPoints() {
-    return g_croppingPolygonPoints;
-}
-
 function getCroppingPointsTransformationMatrix() {
-    return g_croppingPolygonInverseMatrix;
+    return g_interactiveCanvasCroppingPolygonInverseMatrix;
 }
 
 var g_transformationChanges;//TODO: rename to something better
@@ -750,13 +748,28 @@ function isAnyPointsOutsideCanvas(triangle, canvasDimensions) {
     return false;
 }
 
-function filterInvalidTriangles(triangles, canvasDimensions, minPntDist, maxPntDist, minTriArea) {
+function checkIfAllPointsInPolygon(triangle, croppingPointsPoly){
+    for(var i = 0; i < triangle.length; i++){
+        var point = triangle[i];
+        if(!isPointInPolygon(point, croppingPointsPoly)){
+            return false;
+        }
+    }
+    return true;
+}
+
+function filterInvalidTriangles(triangles, canvasDimensions, minPntDist, maxPntDist, minTriArea, croppingPointsPoly) {
     var ret = [];
     for (var i = 0; i < triangles.length; i++) {
         var triangle = triangles[i];
 
         if (isAnyPointsOutsideCanvas(triangle, canvasDimensions)) {
             //Invalid triangle, ignore            
+            continue;
+        }
+
+        //check closing poly
+        if(croppingPointsPoly.length > 0 && !checkIfAllPointsInPolygon(triangle, croppingPointsPoly)){
             continue;
         }
 
@@ -782,7 +795,6 @@ function draw() {
     //init variables
     var interactiveCanvasContext = document.getElementById('interactiveCanvas').getContext('2d');
     var referenceCanvasContext = document.getElementById('referenceCanvas').getContext('2d');
-    var croppingPoints = getCroppingPoints();
     var transformationChanges = getTransformationChanges();
     interactiveCanvasContext.clearRect(0, 0, 512, 512); // clear canvas
     referenceCanvasContext.clearRect(0, 0, 512, 512); // clear canvas
@@ -806,19 +818,27 @@ function draw() {
         var keypoints = getKeypoints();
         var interactiveImageTransformedKeypoints = computeTransformedKeypoints(keypoints, interactiveImageTransformations);
         var referenceImageTransformedKeypoints = computeTransformedKeypoints(keypoints, referenceImageTransformations);
-        var transformedCroppingPoints1 = getTransformedCroppingPointsMatrix(croppingPoints, getCroppingPointsTransformationMatrix());
-        var transformedCroppingPoints2 = getTransformedCroppingPointsMatrix(transformedCroppingPoints1, interactiveImageTransformations);
 
-        var filteredKeypoints = getVisableKeypoints(interactiveImageTransformedKeypoints, {
-            x: 512,
-            y: 512
-        }, transformedCroppingPoints2);
+        var referenceTransformedCroppingPoints1 = getTransformedCroppingPointsMatrix(g_referenceCanvasCroppingPolygonPoints, g_referenceCanvasCroppingPolygonInverseMatrix);
+        var referenceTransformedCroppingPoints2 = getTransformedCroppingPointsMatrix(referenceTransformedCroppingPoints1, referenceImageTransformations);
 
-        g_cachedCalculatedInteractiveCanvasKeypoints = filteredKeypoints;
+        var interactiveTransformedCroppingPoints1 = getTransformedCroppingPointsMatrix(g_interactiveCanvasCroppingPolygonPoints, g_interactiveCanvasCroppingPolygonInverseMatrix);
+        var interactiveTransformedCroppingPoints2 = getTransformedCroppingPointsMatrix(interactiveTransformedCroppingPoints1, interactiveImageTransformations);
+        var interactiveCanvasDimenstions = {
+            x: interactiveCanvasContext.width,
+            y: interactiveCanvasContext.height
+        };
+        var referenceCanvasDimenstions = {
+            x: referenceCanvasContext.width,
+            y: referenceCanvasContext.height
+        };
+        var interactiveFilteredKeypoints = getVisableKeypoints(interactiveImageTransformedKeypoints, interactiveCanvasDimenstions, interactiveTransformedCroppingPoints2);
+
+        g_cachedCalculatedInteractiveCanvasKeypoints = interactiveFilteredKeypoints;
         g_cachedCalculatedReferenceCanvasKeypoints = referenceImageTransformedKeypoints;
         if (g_shouldDrawKeypoints) {
             drawKeypoints(referenceCanvasContext, referenceImageTransformedKeypoints);
-            drawKeypoints(interactiveCanvasContext, filteredKeypoints);
+            drawKeypoints(interactiveCanvasContext, interactiveFilteredKeypoints);
         }
 
         var interactiveTrianglesForAllSteps = [];
@@ -826,7 +846,7 @@ function draw() {
         if (g_shouldDrawTriangles) {
             for (var i = 0; i < g_steps.length; i++) {
                 var currentStep = g_steps[i];
-                var tempTriangles = computeTriangles(filteredKeypoints, currentStep.maxPntDist, currentStep.minPntDist, currentStep.minTriArea);
+                var tempTriangles = computeTriangles(interactiveFilteredKeypoints, currentStep.maxPntDist, currentStep.minPntDist, currentStep.minTriArea);
                 interactiveTrianglesForAllSteps = interactiveTrianglesForAllSteps.concat(tempTriangles);
             }
 
@@ -836,11 +856,10 @@ function draw() {
             for (var i = 0; i < g_steps.length; i++) {
                 var currentStep = g_steps[i];
                 var tempFilteredReferenceImageTriangles = filterInvalidTriangles(trianglesProjectedOntoReferenceCanvas,
-                    {x: 512, y: 512}, currentStep.minPntDist, currentStep.maxPntDist, currentStep.minTriArea);
+                    referenceCanvasDimenstions, currentStep.minPntDist, currentStep.maxPntDist, currentStep.minTriArea, referenceTransformedCroppingPoints2);
                 filteredReferenceImageTrianglesForAllSteps = filteredReferenceImageTrianglesForAllSteps.concat(tempFilteredReferenceImageTriangles);
             }
 
-            // var filteredReferenceImageTrianglesForAllSteps = trianglesProjectedOntoReferenceCanvas;
             drawTriangles(referenceCanvasContext, filteredReferenceImageTrianglesForAllSteps);
             drawTriangles(interactiveCanvasContext, interactiveTrianglesForAllSteps);
         }
@@ -863,7 +882,8 @@ function draw() {
         }
         $("#number_of_triangles_output").html("Number of triangles: " + interactiveTrianglesForAllSteps.length);
         $("#number_of_matching_triangles_output").html("Number of Matching triangles: " + filteredReferenceImageTrianglesForAllSteps.length);
-        drawCroppingPoints(interactiveCanvasContext, transformedCroppingPoints2);
+        drawCroppingPoints(interactiveCanvasContext, interactiveTransformedCroppingPoints2);
+        drawCroppingPoints(referenceCanvasContext, referenceTransformedCroppingPoints2);
     }
 
     //window.requestAnimationFrame(draw);
@@ -892,8 +912,9 @@ $(document).mousemove(function (e) {
 $(document).mouseup(function (e) {
     if (g_isMouseDownAndClickedOnCanvas) {
         handleMouseUp(e);
+        g_isMouseDownAndClickedOnCanvas = false;
+        draw();
     }
-    g_isMouseDownAndClickedOnCanvas = false;
 });
 
 $("#interactiveCanvas").mousedown(function (e) {
@@ -985,7 +1006,7 @@ function handleMouseUpRotate() {
 
 function handleMouseUpCrop(mousePosition) {
     //ignore
-    //g_croppingPolygonPoints.push(mousePosition);
+    //g_interactiveCanvasCroppingPolygonPoints.push(mousePosition);
 }
 
 function handleMouseUp(e) {
@@ -1064,7 +1085,11 @@ function handleMouseMoveRotate(pageMousePosition) {
 }
 
 function handleMouseMoveCrop(mousePosition) {
-    g_croppingPolygonPoints.push(mousePosition);
+    if (g_currentActiveCanvasId == INTERACTIVE_CANVAS_ID) {
+        g_interactiveCanvasCroppingPolygonPoints.push(mousePosition);
+    } else {
+        g_referenceCanvasCroppingPolygonPoints.push(mousePosition);
+    }
 }
 
 function handleMouseMoveOnDocument(e) {
@@ -1134,10 +1159,13 @@ function handleMouseDownRotate(pageMousePosition) {
 }
 
 function handleMouseDownCrop(mousePosition) {
-    g_croppingPolygonPoints = [];
-    var tempMat = convertTransformationObjectToTransformationMatrix(g_interactiveImageTransformation);
-    g_croppingPolygonInverseMatrix = math.inv(tempMat);
-    //g_croppingPolygonPoints.push(mousePosition);
+    if (g_currentActiveCanvasId == INTERACTIVE_CANVAS_ID) {
+        g_interactiveCanvasCroppingPolygonPoints = [];
+        g_interactiveCanvasCroppingPolygonInverseMatrix = math.inv(g_interactiveImageTransformation);
+    } else {
+        g_referenceCanvasCroppingPolygonPoints = [];
+        g_referenceCanvasCroppingPolygonInverseMatrix = math.inv(g_referenceImageTransformation);
+    }
 }
 
 function handleMouseDownOnCanvas(e) {
