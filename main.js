@@ -628,7 +628,7 @@ function drawTriangles(canvasContext, triangles) {
     canvasContext.stroke();
 }
 
-function drawClosingPolygon(ctx, inPoints) {
+function drawClosingPolygon(ctx, inPoints, showFillEffect) {
     if (inPoints.length == 0) {
         return;
     }
@@ -651,7 +651,7 @@ function drawClosingPolygon(ctx, inPoints) {
 
     //fill
     ctx.fillStyle = 'rgba(255, 255, 255, 1.0)';
-    if (g_isMouseDownAndClickedOnCanvas && g_currentTranformationOperationState == enum_TransformationOperation.CROP) {
+    if (showFillEffect) {
         ctx.fillStyle = 'rgba(242, 242, 242, 0.3)';
         ctx.strokeStyle = 'rgba(255, 0, 0, 0.9)';
     }
@@ -660,9 +660,11 @@ function drawClosingPolygon(ctx, inPoints) {
     ctx.stroke();
 };
 
-function drawCroppingPoints(canvasContext, croppingPoints) {
+function drawCroppingPoints(canvasContext, croppingPoints, isActiveCanvas) {
     var transformedPolyPoints = croppingPoints;//getTransformedPolyPoints(g, g_scale, g_rotation, g_scaleDirection, g_translate, {x: 0, y: 0}, {x: 512, y: 512});
-    drawClosingPolygon(canvasContext, transformedPolyPoints);
+    var showFillEffect = g_isMouseDownAndClickedOnCanvas && g_currentTranformationOperationState == enum_TransformationOperation.CROP;
+    showFillEffect = showFillEffect && isActiveCanvas;
+    drawClosingPolygon(canvasContext, transformedPolyPoints, showFillEffect);
 }
 
 function isPointInPolygon(point, vs) {
@@ -825,12 +827,12 @@ function draw() {
         var interactiveTransformedCroppingPoints1 = getTransformedCroppingPointsMatrix(g_interactiveCanvasCroppingPolygonPoints, g_interactiveCanvasCroppingPolygonInverseMatrix);
         var interactiveTransformedCroppingPoints2 = getTransformedCroppingPointsMatrix(interactiveTransformedCroppingPoints1, interactiveImageTransformations);
         var interactiveCanvasDimenstions = {
-            x: interactiveCanvasContext.width,
-            y: interactiveCanvasContext.height
+            x: interactiveCanvasContext.canvas.width,
+            y: interactiveCanvasContext.canvas.height
         };
         var referenceCanvasDimenstions = {
-            x: referenceCanvasContext.width,
-            y: referenceCanvasContext.height
+            x: referenceCanvasContext.canvas.width,
+            y: referenceCanvasContext.canvas.height
         };
         var interactiveFilteredKeypoints = getVisableKeypoints(interactiveImageTransformedKeypoints, interactiveCanvasDimenstions, interactiveTransformedCroppingPoints2);
 
@@ -882,8 +884,13 @@ function draw() {
         }
         $("#number_of_triangles_output").html("Number of triangles: " + interactiveTrianglesForAllSteps.length);
         $("#number_of_matching_triangles_output").html("Number of Matching triangles: " + filteredReferenceImageTrianglesForAllSteps.length);
-        drawCroppingPoints(interactiveCanvasContext, interactiveTransformedCroppingPoints2);
-        drawCroppingPoints(referenceCanvasContext, referenceTransformedCroppingPoints2);
+        if (g_currentActiveCanvasId == INTERACTIVE_CANVAS_ID) {
+            drawCroppingPoints(interactiveCanvasContext, interactiveTransformedCroppingPoints2, true);
+            drawCroppingPoints(referenceCanvasContext, referenceTransformedCroppingPoints2, false);
+        }else{
+            drawCroppingPoints(interactiveCanvasContext, interactiveTransformedCroppingPoints2, false);
+            drawCroppingPoints(referenceCanvasContext, referenceTransformedCroppingPoints2, true);
+        }
     }
 
     //window.requestAnimationFrame(draw);
