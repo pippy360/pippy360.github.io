@@ -96,6 +96,7 @@ var g_cachedCalculatedInteractiveCanvasKeypoints = [];
 
 function toggleDrawUIOverlayMode() {
     g_shouldDrawUIOverlay = !g_shouldDrawUIOverlay;
+    draw();
 }
 
 function toggleDrawKeypointsMode() {
