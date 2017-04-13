@@ -11,6 +11,9 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css"
           integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
     <style>
+        document {
+            font-family: "Roboto","Helvetica","Arial",sans-serif;
+        }
         #bigBlueOuter {
 
             -webkit-touch-callout: none;
@@ -19,7 +22,15 @@
             -moz-user-select: none;
             -ms-user-select: none;
             user-select: none;
+            background-color: #f7f7f7;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .bigBlueInner{
+            margin: 20px auto;
             width: 1140px;
+            display: block;
         }
 
         .move {
@@ -46,68 +57,103 @@
         }
 
         .canvasWrapper {
+            display: inline-block;
+            max-width: 385px;
+            margin: auto;
         }
 
         .trianglesListWrapper {
-            max-height: 350px;
-            max-width: 350px;
+            height: 410px;
+            display: inline-block;
+        }
+        .trianglesListInnerWrapper{
+            height: 370px;
+            display: block;            
             overflow: auto;
         }
-
         .triangleList {
+        }
+        .triangleListBody {
+            overflow: auto;
+        }
+        .header {
+            background-color: #183D4E;
+            width: 100%;
+            color: #ffffff;
+            overflow: hidden;
+            font-family: "Roboto","Helvetica","Arial",sans-serif;
+        }
+        .headerInner {
+            margin: 60px auto;
+            width: 1140px;
+        }
+        .buttons {
+            margin: 20px auto;
+            width: 1140px;
+        }
+        .mainCol{
+            width: 375px;
+            display: inline-block;
+        }
+        .canvasTitle{
+            color: #000;
         }
     </style>
 </head>
 <body>
-<div class="container">
-    <div>
-        <div class="header">
+<div class="fullPageWraper">
+    <div class="header">
+        <div class="headerInner">
             <h1>Image Matching Demo</h1>
             <p>Click and drag on an image to apply a transformation.</p>
         </div>
-        <p>
-            <button id="transposeButton" class="btn btn-default "
-                    onclick="setCurrnetOperation(enum_TransformationOperation.TRANSLATE)">Move
-            </button>
-            <button class="btn btn-default"
-                    onclick="setCurrnetOperation(enum_TransformationOperation.NON_UNIFORM_SCALE)">Scale
-            </button>
-            <button class="btn btn-default" onclick="setCurrnetOperation(enum_TransformationOperation.UNIFORM_SCALE)">
-                Uniform Scale
-            </button>
-            <button class="btn btn-default" onclick="setCurrnetOperation(enum_TransformationOperation.ROTATE)">Rotate
-            </button>
-            <button class="btn btn-default" onclick="setCurrnetOperation(enum_TransformationOperation.CROP)">Crop
-            </button>
-            <button class="btn btn-default" onclick="toggleDrawUIOverlayMode()">Toggle Draw Overlay</button>
-            <!--<button class="btn btn-default" onclick="toggleDrawKeypointsMode()" >Toggle DrawKeypoints</button>-->
-            <!--<button class="btn btn-default" style="float:right;" onclick="callSearch()">CompareImages</button>-->
-        </p>
     </div>
-    <div id="bigBlueOuter" class="row">
-        <div class="canvasWrapper col">
-            <h3>Query Image</h3>
-            <canvas id="interactiveCanvas" width="350" height="350"></canvas>
-            <p id="number_of_triangles_output"></p>
-        </div>
-        <div class="canvasWrapper col">
-            <h3>Matching Image</h3>
-            <canvas id="referenceCanvas" width="350" height="350"></canvas>
-            <p id="number_of_matching_triangles_output"></p>
-        </div>
-        <div class="trianglesListWrapper col">
-            <h3>Results</h3>
-            <table class="triangleList table table-hover">
-                <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Area</th>
-                </tr>
-                </thead>
-                <tbody id="triangleListBody">
+    <div class="buttons">
+        <button id="transposeButton" class="btn btn-default "
+                onclick="setCurrnetOperation(enum_TransformationOperation.TRANSLATE)">Move
+        </button>
+        <button class="btn btn-default"
+                onclick="setCurrnetOperation(enum_TransformationOperation.NON_UNIFORM_SCALE)">Scale
+        </button>
+        <button class="btn btn-default" onclick="setCurrnetOperation(enum_TransformationOperation.UNIFORM_SCALE)">
+            Uniform Scale
+        </button>
+        <button class="btn btn-default" onclick="setCurrnetOperation(enum_TransformationOperation.ROTATE)">Rotate
+        </button>
+        <button class="btn btn-default" onclick="setCurrnetOperation(enum_TransformationOperation.CROP)">Crop
+        </button>
+        <button class="btn btn-default" onclick="toggleDrawUIOverlayMode()">Toggle Draw Overlay</button>
+        <!--<button class="btn btn-default" onclick="toggleDrawKeypointsMode()" >Toggle DrawKeypoints</button>-->
+        <!--<button class="btn btn-default" style="float:right;" onclick="callSearch()">CompareImages</button>-->
+    </div>
+    <div id="bigBlueOuter" class="">
+        <div id="bigBlueInner" class="row bigBlueInner">
+            <div class="canvasWrapper mainCol">
+                <span class="canvasTitle">Query Image</span>
+                <canvas id="interactiveCanvas" width="350" height="350"></canvas>
+                <p id="number_of_triangles_output"></p>
+            </div>
+            <div class="canvasWrapper mainCol">
+                <span class="canvasTitle">Matching Image</span>
+                <canvas id="referenceCanvas" width="350" height="350"></canvas>
+                <p id="number_of_matching_triangles_output"></p>
+            </div>
+            <div class="mainCol trianglesListWrapper">
+                <h3>Results</h3>
+                <div class="trianglesListInnerWrapper">
+                    <table class="triangleList table table-hover">
+                        <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Area</th>
+                        </tr>
+                        </thead>
+                        <tbody id="triangleListBody">
 
-                </tbody>
-            </table>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
     <div id="output">
