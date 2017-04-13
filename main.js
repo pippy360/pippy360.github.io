@@ -9,7 +9,7 @@
 
 const INTERACTIVE_CANVAS_ID = "interactiveCanvas";
 const REFERENCE_CANVAS_ID = "referenceCanvas";
-const NUMBER_OF_KEYPOINTS = 30;
+const NUMBER_OF_KEYPOINTS = 20;
 var g_shouldDrawUIOverlay = true;
 var g_shouldDrawTriangles = true;
 var g_shouldDrawKeypoints = true;
@@ -784,7 +784,7 @@ function filterInvalidTriangles(triangles, canvasDimensions, minPntDist, maxPntD
         var triangle = triangles[i];
 
         if (isAnyPointsOutsideCanvas(triangle, canvasDimensions)) {
-            //Invalid triangle, ignore            
+            //Invalid triangle, ignore
             continue;
         }
 
@@ -1264,6 +1264,6 @@ function loadImageAndInit(imageSrc) {
     };
 }
 
-loadImageAndInit('rick1.jpg');
+//loadImageAndInit('rick1.jpg');
 
-loadImageAndInit('dog1_resize.jpg');
+loadImageAndInit('dog1_resize2.jpg');

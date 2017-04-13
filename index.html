@@ -49,8 +49,8 @@
         }
 
         .trianglesListWrapper {
-            max-height: 500px;
-            max-width: 170px;
+            max-height: 350px;
+            max-width: 350px;
             overflow: auto;
         }
 
@@ -61,10 +61,10 @@
 <body>
 <div class="container">
     <div>
-        <h1>Demo</h1>
-        <p>
-            Click and drag on either image to apply the selected transformation.
-        </p>
+        <div class="header">
+            <h1>Image Matching Demo</h1>
+            <p>Click and drag on an image to apply a transformation.</p>
+        </div>
         <p>
             <button id="transposeButton" class="btn btn-default "
                     onclick="setCurrnetOperation(enum_TransformationOperation.TRANSLATE)">Move
@@ -86,16 +86,19 @@
     </div>
     <div id="bigBlueOuter" class="row">
         <div class="canvasWrapper col">
-            <canvas id="interactiveCanvas" width="400" height="500"></canvas>
+            <h3>Query Image</h3>
+            <canvas id="interactiveCanvas" width="350" height="350"></canvas>
             <p id="number_of_triangles_output"></p>
         </div>
         <div class="canvasWrapper col">
-            <canvas id="referenceCanvas" width="400" height="500"></canvas>
+            <h3>Matching Image</h3>
+            <canvas id="referenceCanvas" width="350" height="350"></canvas>
             <p id="number_of_matching_triangles_output"></p>
         </div>
         <div class="trianglesListWrapper col">
+            <h3>Results</h3>
             <table class="triangleList table table-hover">
-                <thead >
+                <thead>
                 <tr>
                     <th>#</th>
                     <th>Area</th>
