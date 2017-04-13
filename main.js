@@ -833,17 +833,19 @@ function draw() {
     drawBackgroudImageWithTransformationMatrix(interactiveCanvasContext, getBackgroundImage(), interactiveImageTransformations);
     drawBackgroudImageWithTransformationMatrix(referenceCanvasContext, getBackgroundImage(), referenceImageTransformations);
 
+
+    var referenceTransformedCroppingPoints1 = getTransformedCroppingPointsMatrix(g_referenceCanvasCroppingPolygonPoints, g_referenceCanvasCroppingPolygonInverseMatrix);
+    var referenceTransformedCroppingPoints2 = getTransformedCroppingPointsMatrix(referenceTransformedCroppingPoints1, referenceImageTransformations);
+
+    var interactiveTransformedCroppingPoints1 = getTransformedCroppingPointsMatrix(g_interactiveCanvasCroppingPolygonPoints, g_interactiveCanvasCroppingPolygonInverseMatrix);
+    var interactiveTransformedCroppingPoints2 = getTransformedCroppingPointsMatrix(interactiveTransformedCroppingPoints1, interactiveImageTransformations);
+
     if (g_shouldDrawUIOverlay) {
 
         var keypoints = getKeypoints();
         var interactiveImageTransformedKeypoints = computeTransformedKeypoints(keypoints, interactiveImageTransformations);
         var referenceImageTransformedKeypoints = computeTransformedKeypoints(keypoints, referenceImageTransformations);
 
-        var referenceTransformedCroppingPoints1 = getTransformedCroppingPointsMatrix(g_referenceCanvasCroppingPolygonPoints, g_referenceCanvasCroppingPolygonInverseMatrix);
-        var referenceTransformedCroppingPoints2 = getTransformedCroppingPointsMatrix(referenceTransformedCroppingPoints1, referenceImageTransformations);
-
-        var interactiveTransformedCroppingPoints1 = getTransformedCroppingPointsMatrix(g_interactiveCanvasCroppingPolygonPoints, g_interactiveCanvasCroppingPolygonInverseMatrix);
-        var interactiveTransformedCroppingPoints2 = getTransformedCroppingPointsMatrix(interactiveTransformedCroppingPoints1, interactiveImageTransformations);
         var interactiveCanvasDimenstions = {
             x: interactiveCanvasContext.canvas.width,
             y: interactiveCanvasContext.canvas.height
@@ -903,13 +905,13 @@ function draw() {
         }
         $("#number_of_triangles_output").html("Possible Matches: " + interactiveTrianglesForAllSteps.length);
         $("#number_of_matching_triangles_output").html("Actual Matches: " + filteredReferenceImageTrianglesForAllSteps.length);
-        if (g_currentActiveCanvasId == INTERACTIVE_CANVAS_ID) {
-            drawCroppingPoints(interactiveCanvasContext, interactiveTransformedCroppingPoints2, true);
-            drawCroppingPoints(referenceCanvasContext, referenceTransformedCroppingPoints2, false);
-        }else{
-            drawCroppingPoints(interactiveCanvasContext, interactiveTransformedCroppingPoints2, false);
-            drawCroppingPoints(referenceCanvasContext, referenceTransformedCroppingPoints2, true);
-        }
+    }
+    if (g_currentActiveCanvasId == INTERACTIVE_CANVAS_ID) {
+        drawCroppingPoints(interactiveCanvasContext, interactiveTransformedCroppingPoints2, true);
+        drawCroppingPoints(referenceCanvasContext, referenceTransformedCroppingPoints2, false);
+    }else{
+        drawCroppingPoints(interactiveCanvasContext, interactiveTransformedCroppingPoints2, false);
+        drawCroppingPoints(referenceCanvasContext, referenceTransformedCroppingPoints2, true);
     }
 
     //window.requestAnimationFrame(draw);
