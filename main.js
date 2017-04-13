@@ -9,7 +9,7 @@
 
 const INTERACTIVE_CANVAS_ID = "interactiveCanvas";
 const REFERENCE_CANVAS_ID = "referenceCanvas";
-const NUMBER_OF_KEYPOINTS = 60;
+const NUMBER_OF_KEYPOINTS = 30;
 var g_shouldDrawUIOverlay = true;
 var g_shouldDrawTriangles = true;
 var g_shouldDrawKeypoints = true;
