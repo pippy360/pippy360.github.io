@@ -14,6 +14,7 @@ var g_shouldDrawUIOverlay = true;
 var g_shouldDrawTriangles = true;
 var g_shouldDrawKeypoints = true;
 var g_enableFillEffect = false;
+var g_minCroppingPolygonArea = 600;
 var g_highlightedTriangle = null;
 // var g_maxPntDist = 200;
 // var g_minPntDist = 150;
@@ -242,7 +243,23 @@ function callSearch() {
 // #     # ######   #   #    #
 // #     # #    #   #   #    #
 // #     # #    #   #   #    #
+//math
 
+function calcPolygonArea(vertices) {
+    var total = 0;
+
+    for (var i = 0, l = vertices.length; i < l; i++) {
+        var addX = vertices[i].x;
+        var addY = vertices[i == vertices.length - 1 ? 0 : i + 1].y;
+        var subX = vertices[i == vertices.length - 1 ? 0 : i + 1].x;
+        var subY = vertices[i].y;
+
+        total += (addX * addY * 0.5);
+        total -= (subX * subY * 0.5);
+    }
+
+    return Math.abs(total);
+}
 
 function getArea(tri) {
     var a = tri[0];
@@ -870,11 +887,12 @@ function draw() {
 
         if (!g_skipListGen) {
 
-            $("#triangleOutputList").html("");
+            $("#triangleListBody").html("");
             for (var i = 0; i < filteredReferenceImageTrianglesForAllSteps.length; i++) {
                 var triangle = filteredReferenceImageTrianglesForAllSteps[i];
                 var triangleString = triangle[0].x + ", " + triangle[0].y + ", " + triangle[1].x + ", " + triangle[1].y + ", " + triangle[2].x + ", " + triangle[2].y;
-                $("#triangleOutputList").append("<li class=\"list-group-item\" onmouseover=\"highlightTriangle(" + triangleString + ")\"><span>Triangle " + i + "</span><pre>&#9;</pre><span>Area=" + getArea(triangle) + " </span></li>");
+                var outputStr = "<tr onmouseover=\"highlightTriangle(" + triangleString + ")\"><td>" + i + "</td><td>" + getArea(triangle) + " </td></tr>";
+                $("#triangleListBody").append(outputStr);
             }
             $(".list-group-item").hover(function () {
                     $(this).addClass("active");
@@ -1013,8 +1031,20 @@ function handleMouseUpRotate() {
 }
 
 function handleMouseUpCrop(mousePosition) {
-    //ignore
-    //g_interactiveCanvasCroppingPolygonPoints.push(mousePosition);
+    var croppingPolyPoints = [];
+    if (g_currentActiveCanvasId == INTERACTIVE_CANVAS_ID) {
+        croppingPolyPoints = g_interactiveCanvasCroppingPolygonPoints;
+    } else {
+        croppingPolyPoints = g_referenceCanvasCroppingPolygonPoints;
+    }
+    var area = calcPolygonArea(croppingPolyPoints);
+    if(area < g_minCroppingPolygonArea){
+        if (g_currentActiveCanvasId == INTERACTIVE_CANVAS_ID) {
+            g_interactiveCanvasCroppingPolygonPoints = [];
+        } else {
+            g_referenceCanvasCroppingPolygonPoints = [];
+        }
+    }
 }
 
 function handleMouseUp(e) {

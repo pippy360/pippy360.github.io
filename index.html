@@ -34,17 +34,26 @@
         }
 
         #triangleOutputList {
-            max-width: 600px;
+            max-width: 400px;
             height: 400px;
             overflow: auto;
             margin-top: 20px;
         }
+
         canvas {
             border: 1px solid black;
         }
-        .canvasWrapper{
-            max-width: 520px;
-            display: inline-block;
+
+        .canvasWrapper {
+        }
+
+        .trianglesListWrapper {
+            max-height: 500px;
+            max-width: 170px;
+            overflow: auto;
+        }
+
+        .triangleList {
         }
     </style>
 </head>
@@ -74,25 +83,35 @@
             <!--<button class="btn btn-default" style="float:right;" onclick="callSearch()">CompareImages</button>-->
         </p>
     </div>
-    <div id="bigBlueOuter">
-        <div class="canvasWrapper">
-            <canvas id="interactiveCanvas" width="512" height="512"></canvas>
+    <div id="bigBlueOuter" class="row">
+        <div class="canvasWrapper col">
+            <canvas id="interactiveCanvas" width="400" height="500"></canvas>
             <p id="number_of_triangles_output"></p>
         </div>
-        <div class="canvasWrapper">
-            <canvas id="referenceCanvas" width="512" height="512"></canvas>
+        <div class="canvasWrapper col">
+            <canvas id="referenceCanvas" width="400" height="500"></canvas>
             <p id="number_of_matching_triangles_output"></p>
+        </div>
+        <div class="trianglesListWrapper col">
+            <table class="triangleList table table-hover">
+                <thead >
+                <tr>
+                    <th>#</th>
+                    <th>Area</th>
+                </tr>
+                </thead>
+                <tbody id="triangleListBody">
+
+                </tbody>
+            </table>
         </div>
     </div>
     <div id="output">
-            <!--<span id="searchResultsOutput">-->
-                <!--<div id="searchResultsOutputDiv" class="alert alert-success" role="alert">-->
-                  <!--<strong>Matched!</strong> X matches found-->
-                <!--</div>-->
-            <!--</span>-->
-        <ul id="triangleOutputList" class="list-group">
-            <li>This list should not be empty :(</li>
-        </ul>
+        <!--<span id="searchResultsOutput">-->
+        <!--<div id="searchResultsOutputDiv" class="alert alert-success" role="alert">-->
+        <!--<strong>Matched!</strong> X matches found-->
+        <!--</div>-->
+        <!--</span>-->
     </div>
 </div>
 <svg id="lineSvgTag" style="display: inline;position: absolute; min-height: 4px;min-width: 4px;">
