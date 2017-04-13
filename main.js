@@ -9,7 +9,7 @@
 
 const INTERACTIVE_CANVAS_ID = "interactiveCanvas";
 const REFERENCE_CANVAS_ID = "referenceCanvas";
-const NUMBER_OF_KEYPOINTS = 150;
+const NUMBER_OF_KEYPOINTS = 60;
 var g_shouldDrawUIOverlay = true;
 var g_shouldDrawTriangles = true;
 var g_shouldDrawKeypoints = true;
@@ -883,8 +883,8 @@ function draw() {
                     $(this).removeClass("active");
                 });
         }
-        $("#number_of_triangles_output").html("Number of triangles: " + interactiveTrianglesForAllSteps.length);
-        $("#number_of_matching_triangles_output").html("Number of Matching triangles: " + filteredReferenceImageTrianglesForAllSteps.length);
+        $("#number_of_triangles_output").html("Possible Matches: " + interactiveTrianglesForAllSteps.length);
+        $("#number_of_matching_triangles_output").html("Actual Matches: " + filteredReferenceImageTrianglesForAllSteps.length);
         if (g_currentActiveCanvasId == INTERACTIVE_CANVAS_ID) {
             drawCroppingPoints(interactiveCanvasContext, interactiveTransformedCroppingPoints2, true);
             drawCroppingPoints(referenceCanvasContext, referenceTransformedCroppingPoints2, false);
@@ -1226,13 +1226,14 @@ function init() {
     //window.requestAnimationFrame(draw);
 }
 
-function loadImageAndInit() {
+function loadImageAndInit(imageSrc) {
     //g_dogImage.src = 'dog1_resize.jpg';
-    g_dogImage.src = 'rick1.jpg';
+    g_dogImage.src = imageSrc;
     g_dogImage.onload = function () {
         init();
     };
 }
 
-loadImageAndInit();
+loadImageAndInit('rick1.jpg');
 
+loadImageAndInit('dog1_resize.jpg');
