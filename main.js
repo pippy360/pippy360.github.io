@@ -7,6 +7,10 @@
 //  #####  ######  ####  #####  #    # ######       #    #    # #    #  ####
 //global vars
 
+var g_targetTriangleScale = {
+    x: 200,
+    y: 200
+}
 const INTERACTIVE_CANVAS_ID = "interactiveCanvas";
 const REFERENCE_CANVAS_ID = "referenceCanvas";
 const NUMBER_OF_KEYPOINTS = 20;
@@ -273,6 +277,43 @@ function getArea(tri) {
 
 function getScaleMatrix(scaleX, scaleY) {
     return [[scaleX, 0, 0], [0, scaleY, 0], [0, 0, 1]];
+}
+
+function calcTransformationMatrixToEquilateralTriangle(inputTriangle) {
+	/*
+	 * ######CODE BY ROSCA#######
+	 */
+    var targetTriangle = [
+        {x:  0, y: 0},
+        {x: .5*g_targetTriangleScale.x, y: 1*g_targetTriangleScale.y},
+        {x:  1*g_targetTriangleScale.x, y: 0}
+    ]
+    var pt1 = targetTriangle[1];
+    var pt2 = targetTriangle[2];
+    var targetTriangleMat = [
+        [pt1.x, pt2.x, 0.0],
+        [pt1.y, pt2.y, 0.0],
+        [  0.0,   0.0, 1.0]
+    ];
+    var pt0 = inputTriangle[0];
+    pt1 = inputTriangle[1];
+    pt2 = inputTriangle[2];
+    var inputTriangleMat = [
+        [pt1.x-pt0.x, pt2.x-pt0.x, 0.0],
+        [pt1.y-pt0.y, pt2.y-pt0.y, 0.0],
+        [        0.0,         0.0, 1.0]
+    ];
+    //move to 0,0
+    var tranlateMat = [
+        [ 1.0, 0.0, -pt0.x],
+        [ 0.0, 1.0, -pt0.y],
+        [ 0.0, 0.0, 1.0]
+    ];
+    var result = getIdentityMatrix();
+    result = matrixMultiply(result, targetTriangleMat);
+    result = matrixMultiply(result, math.inv(inputTriangleMat));
+    result = matrixMultiply(result, tranlateMat);
+    return result
 }
 
 function getDirectionalScaleMatrix(scaleX, scaleY, direction) {
@@ -569,6 +610,22 @@ function highlightTriangle(x1, y1, x2, y2, x3, y3) {
     draw()
     g_skipListGen = false;
     var referenceCanvasContext = document.getElementById('referenceCanvas').getContext('2d');
+    var fragmentCanvasContext = document.getElementById('fragmentCanvas2').getContext('2d');
+    var mat = calcTransformationMatrixToEquilateralTriangle(g_highlightedTriangle);
+    referenceCanvasContext.clearRect(0,0,g_targetTriangleScale.x, g_targetTriangleScale.y)
+
+    referenceCanvasContext.save()
+    referenceCanvasContext.transform(mat[0][0], mat[1][0], mat[0][1], mat[1][1], mat[0][2], mat[1][2]);    
+    referenceCanvasContext.clearRect(0,0,g_targetTriangleScale.x, g_targetTriangleScale.y)
+    referenceCanvasContext.drawImage(getBackgroundImage(), 0, 0)
+    var imgData=referenceCanvasContext.getImageData(0,0,g_targetTriangleScale.x,g_targetTriangleScale.y);
+
+    fragmentCanvasContext.clearRect(0,0,g_targetTriangleScale.x, g_targetTriangleScale.y)
+    fragmentCanvasContext.putImageData(imgData, 0, 0);
+
+    referenceCanvasContext.restore()
+    draw();
+    // referenceCanvasContext.rotate(20*Math.PI/180);
     g_enableFillEffect = true;
     drawTriangleWithColour(referenceCanvasContext, g_highlightedTriangle, [255, 255, 255], [255, 0, 0])
     g_enableFillEffect = false;
