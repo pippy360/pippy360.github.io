@@ -12,8 +12,9 @@
           integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
     <style>
         document {
-            font-family: "Roboto","Helvetica","Arial",sans-serif;
+            font-family: "Roboto", "Helvetica", "Arial", sans-serif;
         }
+
         #bigBlueOuter {
             -webkit-touch-callout: none;
             -webkit-user-select: none;
@@ -26,9 +27,9 @@
             min-width: 1200px;
         }
 
-        .bigBlueInner{
+        .bigBlueInner {
             padding: 0px 30px;
-            margin: 20px auto;
+            margin: 0px auto;
             width: 1200px;
             display: block;
         }
@@ -66,45 +67,57 @@
             height: 410px;
             display: inline-block;
         }
-        .trianglesListInnerWrapper{
+
+        .trianglesListInnerWrapper {
             height: 370px;
-            display: block;            
+            display: block;
             overflow: auto;
-            border-bottom: 1px solid rgba(0,0,0,0.19);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.19);
         }
+
         .triangleList {
         }
+
         .triangleListBody {
             overflow: auto;
         }
+
         .header {
             background-color: #183D4E;
             width: 100%;
             min-width: 1200px;
             color: #ffffff;
             overflow: hidden;
-            font-family: "Roboto","Helvetica","Arial",sans-serif;
+            font-family: "Roboto", "Helvetica", "Arial", sans-serif;
             text-align: center;
         }
+
         .headerInner {
             margin: 60px auto;
             width: 1140px;
         }
-        .buttons {
-            margin: 20px auto;
+
+        .buttonsWrapper {
+            margin: 5px auto 10px auto;
             padding: 0px 30px;
             width: 1200px;
         }
-        .mainCol{
+
+        .buttons {
+        }
+
+        .mainCol {
             width: 375px;
             display: inline-block;
         }
-        .canvasTitle{
+
+        .canvasTitle {
             color: #000;
             padding-bottom: 10px;
             padding-top: 10px;
             display: block;
         }
+
     </style>
 </head>
 <body>
@@ -115,23 +128,36 @@
             <p>Click and drag on an image to apply a transformation.</p>
         </div>
     </div>
-    <div class="buttons">
-        <button id="transposeButton" class="btn btn-default "
-                onclick="setCurrnetOperation(enum_TransformationOperation.TRANSLATE)">Move
-        </button>
-        <button class="btn btn-default"
-                onclick="setCurrnetOperation(enum_TransformationOperation.NON_UNIFORM_SCALE)">Scale
-        </button>
-        <button class="btn btn-default" onclick="setCurrnetOperation(enum_TransformationOperation.UNIFORM_SCALE)">
-            Uniform Scale
-        </button>
-        <button class="btn btn-default" onclick="setCurrnetOperation(enum_TransformationOperation.ROTATE)">Rotate
-        </button>
-        <button class="btn btn-default" onclick="setCurrnetOperation(enum_TransformationOperation.CROP)">Crop
-        </button>
-        <button class="btn btn-default" onclick="toggleDrawUIOverlayMode()">Toggle Draw Overlay</button>
-        <!--<button class="btn btn-default" onclick="toggleDrawKeypointsMode()" >Toggle DrawKeypoints</button>-->
-        <!--<button class="btn btn-default" style="float:right;" onclick="callSearch()">CompareImages</button>-->
+    <div class="buttonsWrapper">
+        <span>Transformations:</span>
+        <div class="buttons"  >
+            <span data-toggle="buttons">
+                <label class="btn btn-secondary active" onclick="setCurrnetOperation(enum_TransformationOperation.TRANSLATE)">
+                    <input type="radio" name="options" autocomplete="off" checked>Move</input>
+                </label>
+                <label class="btn btn-secondary" onclick="setCurrnetOperation(enum_TransformationOperation.NON_UNIFORM_SCALE)">
+                    <input type="radio" name="options" autocomplete="off">Scale</input>
+                </label>
+                <label class="btn btn-secondary" onclick="setCurrnetOperation(enum_TransformationOperation.UNIFORM_SCALE)">
+                    <input type="radio" name="options" autocomplete="off">Uniform Scale</input>
+                </label>
+                <label class="btn btn-secondary" onclick="setCurrnetOperation(enum_TransformationOperation.ROTATE)">
+                    <input type="radio" name="options" autocomplete="off">Rotate</input>
+                </label>
+                <label class="btn btn-secondary" onclick="setCurrnetOperation(enum_TransformationOperation.CROP)">
+                    <input type="radio" name="options" autocomplete="off">Crop</input>
+                </label>
+            </span>
+            <!--<button class="btn btn-default" onclick="toggleDrawKeypointsMode()" >Toggle DrawKeypoints</button>-->
+            <!--<button class="btn btn-default" style="float:right;" onclick="callSearch()">CompareImages</button>-->
+            <span style="float: right"  data-toggle="buttons">                
+                <label class="btn btn-secondary"  onclick="toggleDrawUIOverlayMode()">
+                    <input type="checkbox" name="options2" autocomplete="off">Hide UI Overlay</input>
+                </label>
+            </span>
+        </div>
+        <div style="float: right">
+        </div>
     </div>
     <div id="bigBlueOuter" class="">
         <div id="bigBlueInner" class="row bigBlueInner">
@@ -183,6 +209,7 @@
         integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn"
         crossorigin="anonymous"></script>
 <script src="main.js"></script>
+
 <script>
 </script>
 </body>
