@@ -70,6 +70,7 @@
             height: 370px;
             display: block;            
             overflow: auto;
+            border-bottom: 1px solid rgba(0,0,0,0.19);
         }
         .triangleList {
         }
@@ -79,7 +80,7 @@
         .header {
             background-color: #183D4E;
             width: 100%;
-            min-width: 1140px;
+            min-width: 1200px;
             color: #ffffff;
             overflow: hidden;
             font-family: "Roboto","Helvetica","Arial",sans-serif;
@@ -100,6 +101,9 @@
         }
         .canvasTitle{
             color: #000;
+            padding-bottom: 10px;
+            padding-top: 10px;
+            display: block;
         }
     </style>
 </head>
@@ -142,7 +146,7 @@
                 <p id="number_of_matching_triangles_output"></p>
             </div>
             <div class="mainCol trianglesListWrapper">
-                <h3>Results</h3>
+                <span class="canvasTitle">Results</span>
                 <div class="trianglesListInnerWrapper">
                     <table class="triangleList table table-hover">
                         <thead>
