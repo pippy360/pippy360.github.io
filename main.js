@@ -428,6 +428,15 @@ function getScaleMatrix(scaleX, scaleY) {
     return [[scaleX, 0, 0], [0, scaleY, 0], [0, 0, 1]];
 }
 
+function getTargetTriangleRotated180() {
+    var targetTriangle = [
+        {x: g_targetTriangleScale.x, y: g_targetTriangleScale.y},
+        {x: .5 * g_targetTriangleScale.x, y: 0},
+        {x: 0, y: g_targetTriangleScale.y}
+    ];
+    return targetTriangle;
+}
+
 function getTargetTriangle(){
     var targetTriangle = [
         {x: 0, y: 0},
@@ -757,6 +766,9 @@ function k_combinations(set, k) {
 
 function drawFragment(baseCanvas, fragmentCanvasContext, baseTransformationMatrix, fragmentTriangle) {
     fragmentCanvasContext.save();
+    fragmentCanvasContext.translate(fragmentCanvasContext.canvas.width/2, fragmentCanvasContext.canvas.height/2);
+    fragmentCanvasContext.rotate(180.0 * Math.PI/180);
+    fragmentCanvasContext.translate(-fragmentCanvasContext.canvas.width/2, -fragmentCanvasContext.canvas.height/2);
     var mat = getIdentityMatrix();//baseTransformationMatrix;
     var mat2 = calcTransformationMatrixToEquilateralTriangle(fragmentTriangle);
     mat = matrixMultiply(mat2, mat);
@@ -800,8 +812,8 @@ function highlightTriangle(referenceTriangleId) {
     drawTriangleWithColour(interactiveCanvasContext, g_interactiveImageHighlightedTriangle, [255, 255, 255], [255, 0, 0])
     g_enableFillEffect = false;
 
-    drawCroppingPoints(referenceFragmentCanvasContext, getTargetTriangle(), false)
-    drawCroppingPoints(interactiveFragmentCanvasContext, getTargetTriangle(), false)
+    drawCroppingPoints(referenceFragmentCanvasContext, getTargetTriangleRotated180(), false)
+    drawCroppingPoints(interactiveFragmentCanvasContext, getTargetTriangleRotated180(), false)
 
     var pHash1 = pHash(interactiveFragmentCanvas);
     var pHash2 = pHash(referenceFragmentCanvas);
