@@ -750,28 +750,40 @@ function k_combinations(set, k) {
 // #####   #    # #    # #    #
 //draw
 
-function drawFragment(interactiveFragmentCanvasContext, baseTransformationMatrix, fragmentTriangle) {
-    interactiveFragmentCanvasContext.save();
-    var mat = baseTransformationMatrix;
+function drawFragment(baseCanvas, fragmentCanvasContext, baseTransformationMatrix, fragmentTriangle) {
+    fragmentCanvasContext.save();
+    var mat = getIdentityMatrix();//baseTransformationMatrix;
     var mat2 = calcTransformationMatrixToEquilateralTriangle(fragmentTriangle);
     mat = matrixMultiply(mat2, mat);
-    interactiveFragmentCanvasContext.clearRect(0, 0, g_targetTriangleScale.x, g_targetTriangleScale.y)
-    interactiveFragmentCanvasContext.transform(mat[0][0], mat[1][0], mat[0][1], mat[1][1], mat[0][2], mat[1][2]);
-    interactiveFragmentCanvasContext.drawImage(getBackgroundImage(), 0, 0)
-    interactiveFragmentCanvasContext.restore();
+    fragmentCanvasContext.clearRect(0, 0, g_targetTriangleScale.x, g_targetTriangleScale.y)
+    fragmentCanvasContext.transform(mat[0][0], mat[1][0], mat[0][1], mat[1][1], mat[0][2], mat[1][2]);
+    fragmentCanvasContext.drawImage(baseCanvas, 0, 0)
+    fragmentCanvasContext.restore();
 }
 
 function highlightTriangle(referenceTriangleId) {
+    g_shouldDrawUIOverlay = false;
+    g_skipListGen = true;
+    draw();
+    g_skipListGen = false;
+    g_shouldDrawUIOverlay = true;
+
+
     g_referenceImageHighlightedTriangle = g_triangleMapByReferenceTriangleIndex.get(referenceTriangleId).referenceTriangle;
     g_interactiveImageHighlightedTriangle = g_triangleMapByReferenceTriangleIndex.get(referenceTriangleId).interactiveTriangle;
+
+    var interactiveCanvas = document.getElementById('interactiveCanvas');
+    var interactiveCanvasContext = interactiveCanvas.getContext('2d');
+    var referenceCanvas = document.getElementById('referenceCanvas');
+    var referenceCanvasContext = referenceCanvas.getContext('2d');
 
     var interactiveFragmentCanvas = document.getElementById('fragmentCanvas1');
     var referenceFragmentCanvas = document.getElementById('fragmentCanvas2');
     var interactiveFragmentCanvasContext = interactiveFragmentCanvas.getContext('2d');
     var referenceFragmentCanvasContext = referenceFragmentCanvas.getContext('2d');
 
-    drawFragment(referenceFragmentCanvasContext, g_referenceImageTransformation, g_referenceImageHighlightedTriangle);
-    drawFragment(interactiveFragmentCanvasContext, g_interactiveImageTransformation, g_interactiveImageHighlightedTriangle);
+    drawFragment(referenceCanvas, referenceFragmentCanvasContext, g_referenceImageTransformation, g_referenceImageHighlightedTriangle);
+    drawFragment(interactiveCanvas, interactiveFragmentCanvasContext, g_interactiveImageTransformation, g_interactiveImageHighlightedTriangle);
 
     g_skipListGen = true;
     draw();
@@ -779,8 +791,6 @@ function highlightTriangle(referenceTriangleId) {
 
     // referenceCanvasContext.rotate(20*Math.PI/180);
     g_enableFillEffect = true;
-    var interactiveCanvasContext = document.getElementById('interactiveCanvas').getContext('2d');
-    var referenceCanvasContext = document.getElementById('referenceCanvas').getContext('2d');
     drawTriangleWithColour(referenceCanvasContext, g_referenceImageHighlightedTriangle, [255, 255, 255], [255, 0, 0])
     drawTriangleWithColour(interactiveCanvasContext, g_interactiveImageHighlightedTriangle, [255, 255, 255], [255, 0, 0])
     g_enableFillEffect = false;
