@@ -428,15 +428,20 @@ function getScaleMatrix(scaleX, scaleY) {
     return [[scaleX, 0, 0], [0, scaleY, 0], [0, 0, 1]];
 }
 
-function calcTransformationMatrixToEquilateralTriangle(inputTriangle) {
-    /*
-     * ######CODE BY ROSCA#######
-     */
+function getTargetTriangle(){
     var targetTriangle = [
         {x: 0, y: 0},
         {x: .5 * g_targetTriangleScale.x, y: 1 * g_targetTriangleScale.y},
         {x: 1 * g_targetTriangleScale.x, y: 0}
-    ]
+    ];
+    return targetTriangle;
+}
+
+function calcTransformationMatrixToEquilateralTriangle(inputTriangle) {
+    /*
+     * ######CODE BY ROSCA#######
+     */
+    var targetTriangle = getTargetTriangle();
     var pt1 = targetTriangle[1];
     var pt2 = targetTriangle[2];
     var targetTriangleMat = [
@@ -794,6 +799,9 @@ function highlightTriangle(referenceTriangleId) {
     drawTriangleWithColour(referenceCanvasContext, g_referenceImageHighlightedTriangle, [255, 255, 255], [255, 0, 0])
     drawTriangleWithColour(interactiveCanvasContext, g_interactiveImageHighlightedTriangle, [255, 255, 255], [255, 0, 0])
     g_enableFillEffect = false;
+
+    drawCroppingPoints(referenceFragmentCanvasContext, getTargetTriangle(), false)
+    drawCroppingPoints(interactiveFragmentCanvasContext, getTargetTriangle(), false)
 
     var pHash1 = pHash(interactiveFragmentCanvas);
     var pHash2 = pHash(referenceFragmentCanvas);
