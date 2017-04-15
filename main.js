@@ -19,7 +19,9 @@ var g_shouldDrawTriangles = true;
 var g_shouldDrawKeypoints = true;
 var g_enableFillEffect = false;
 var g_minCroppingPolygonArea = 600;
-var g_highlightedTriangle = null;
+var g_referenceImageHighlightedTriangle = null;
+var g_interactiveImageHighlightedTriangle = null;
+var g_triangleMapByReferenceTriangleIndex = new Map();
 // var g_maxPntDist = 200;
 // var g_minPntDist = 150;
 // var g_minTriArea = 400;//11000;
@@ -280,29 +282,30 @@ function getScaleMatrix(scaleX, scaleY) {
 }
 
 function calcTransformationMatrixToEquilateralTriangle(inputTriangle) {
-	/*
-	 * ######CODE BY ROSCA#######
-	 */
+    /*
+     * ######CODE BY ROSCA#######
+     */
     var targetTriangle = [
-        {x:  0, y: 0},
-        {x: .5*g_targetTriangleScale.x, y: 1*g_targetTriangleScale.y},
-        {x:  1*g_targetTriangleScale.x, y: 0}
+        {x: 0, y: 0},
+        {x: .5 * g_targetTriangleScale.x, y: 1 * g_targetTriangleScale.y},
+        {x: 1 * g_targetTriangleScale.x, y: 0}
     ]
     var pt1 = targetTriangle[1];
     var pt2 = targetTriangle[2];
     var targetTriangleMat = [
         [pt1.x, pt2.x, 0.0],
         [pt1.y, pt2.y, 0.0],
-        [  0.0,   0.0, 1.0]
+        [0.0, 0.0, 1.0]
     ];
     var pt0 = inputTriangle[0];
     pt1 = inputTriangle[1];
     pt2 = inputTriangle[2];
     var inputTriangleMat = [
-        [pt1.x-pt0.x, pt2.x-pt0.x, 0.0],
-        [pt1.y-pt0.y, pt2.y-pt0.y, 0.0],
-        [        0.0,         0.0, 1.0]
+        [pt1.x - pt0.x, pt2.x - pt0.x, 0.0],
+        [pt1.y - pt0.y, pt2.y - pt0.y, 0.0],
+        [0.0, 0.0, 1.0]
     ];
+    //move to 0,0
     //move to 0,0
     var tranlateMat = [
         [ 1.0, 0.0, -pt0.x],
@@ -600,34 +603,36 @@ function k_combinations(set, k) {
 // #####   #    # #    # #    #
 //draw
 
-function highlightTriangle(x1, y1, x2, y2, x3, y3) {
-    g_highlightedTriangle = [
-        {x: x1, y: y1},
-        {x: x2, y: y2},
-        {x: x3, y: y3}
-    ];
-    g_skipListGen = true;
-    draw()
-    g_skipListGen = false;
+function drawFragment(interactiveFragmentCanvasContext, baseTransformationMatrix, fragmentTriangle) {
+    interactiveFragmentCanvasContext.save();
+    var mat = baseTransformationMatrix;
+    var mat2 = calcTransformationMatrixToEquilateralTriangle(fragmentTriangle);
+    mat = matrixMultiply(mat2, mat);
+    interactiveFragmentCanvasContext.clearRect(0, 0, g_targetTriangleScale.x, g_targetTriangleScale.y)
+    interactiveFragmentCanvasContext.transform(mat[0][0], mat[1][0], mat[0][1], mat[1][1], mat[0][2], mat[1][2]);
+    interactiveFragmentCanvasContext.drawImage(getBackgroundImage(), 0, 0)
+    interactiveFragmentCanvasContext.restore();
+}
+
+function highlightTriangle(referenceTriangleId) {
+    g_referenceImageHighlightedTriangle = g_triangleMapByReferenceTriangleIndex.get(referenceTriangleId).referenceTriangle;
+    g_interactiveImageHighlightedTriangle = g_triangleMapByReferenceTriangleIndex.get(referenceTriangleId).interactiveTriangle;
+
+    var interactiveCanvasContext = document.getElementById('interactiveCanvas').getContext('2d');
     var referenceCanvasContext = document.getElementById('referenceCanvas').getContext('2d');
-    var fragmentCanvasContext = document.getElementById('fragmentCanvas2').getContext('2d');
-    var mat = calcTransformationMatrixToEquilateralTriangle(g_highlightedTriangle);
-    referenceCanvasContext.clearRect(0,0,g_targetTriangleScale.x, g_targetTriangleScale.y)
+    var interactiveFragmentCanvasContext = document.getElementById('fragmentCanvas1').getContext('2d');
+    var referenceFragmentCanvasContext = document.getElementById('fragmentCanvas2').getContext('2d');
 
-    referenceCanvasContext.save()
-    referenceCanvasContext.transform(mat[0][0], mat[1][0], mat[0][1], mat[1][1], mat[0][2], mat[1][2]);    
-    referenceCanvasContext.clearRect(0,0,g_targetTriangleScale.x, g_targetTriangleScale.y)
-    referenceCanvasContext.drawImage(getBackgroundImage(), 0, 0)
-    var imgData=referenceCanvasContext.getImageData(0,0,g_targetTriangleScale.x,g_targetTriangleScale.y);
+    drawFragment(referenceFragmentCanvasContext, g_referenceImageTransformation, g_referenceImageHighlightedTriangle);
+    drawFragment(interactiveFragmentCanvasContext, g_interactiveImageTransformation, g_interactiveImageHighlightedTriangle);
 
-    fragmentCanvasContext.clearRect(0,0,g_targetTriangleScale.x, g_targetTriangleScale.y)
-    fragmentCanvasContext.putImageData(imgData, 0, 0);
-
-    referenceCanvasContext.restore()
+    g_skipListGen = true;
     draw();
+    g_skipListGen = false;
     // referenceCanvasContext.rotate(20*Math.PI/180);
     g_enableFillEffect = true;
-    drawTriangleWithColour(referenceCanvasContext, g_highlightedTriangle, [255, 255, 255], [255, 0, 0])
+    drawTriangleWithColour(referenceCanvasContext, g_referenceImageHighlightedTriangle, [255, 255, 255], [255, 0, 0])
+    drawTriangleWithColour(interactiveCanvasContext, g_interactiveImageHighlightedTriangle, [255, 255, 255], [255, 0, 0])
     g_enableFillEffect = false;
 }
 
@@ -825,10 +830,10 @@ function isAnyPointsOutsideCanvas(triangle, canvasDimensions) {
     return false;
 }
 
-function checkIfAllPointsInPolygon(triangle, croppingPointsPoly){
-    for(var i = 0; i < triangle.length; i++){
+function checkIfAllPointsInPolygon(triangle, croppingPointsPoly) {
+    for (var i = 0; i < triangle.length; i++) {
         var point = triangle[i];
-        if(!isPointInPolygon(point, croppingPointsPoly)){
+        if (!isPointInPolygon(point, croppingPointsPoly)) {
             return false;
         }
     }
@@ -846,7 +851,7 @@ function filterInvalidTriangles(triangles, canvasDimensions, minPntDist, maxPntD
         }
 
         //check closing poly
-        if(croppingPointsPoly.length > 0 && !checkIfAllPointsInPolygon(triangle, croppingPointsPoly)){
+        if (croppingPointsPoly.length > 0 && !checkIfAllPointsInPolygon(triangle, croppingPointsPoly)) {
             continue;
         }
 
@@ -859,10 +864,28 @@ function filterInvalidTriangles(triangles, canvasDimensions, minPntDist, maxPntD
             && d2 < maxPntDist
             && getArea(triangle) > minTriArea
         ) {
-            ret.push(triangle)
+            ret.push({index: i, triangle: triangle});
         } else {
             //Invalid triangle, ignore
         }
+    }
+    return ret;
+}
+
+function getAllTrianglesFromIndexTriangleObjects(trianglesAndIndex) {
+    var ret = [];
+    for (var i = 0; i < trianglesAndIndex.length; i++) {
+        ret.push(trianglesAndIndex[i].triangle);
+    }
+    return ret;
+}
+
+function buildReferenceAndInteractiveImageTrianglesByReferenceTriangleIndex(referenceTriangleAndIndex, interactiveTrianglesForAllSteps) {
+    var ret = new Map();
+    for (var i = 0; i < referenceTriangleAndIndex.length; i++) {
+        var refTri = referenceTriangleAndIndex[i].triangle;
+        var intTri = interactiveTrianglesForAllSteps[referenceTriangleAndIndex[i].index];
+        ret.set(referenceTriangleAndIndex[i].index, {referenceTriangle: refTri, interactiveTriangle: intTri});
     }
     return ret;
 }
@@ -936,10 +959,14 @@ function draw() {
                 var currentStep = g_steps[i];
                 var tempFilteredReferenceImageTriangles = filterInvalidTriangles(trianglesProjectedOntoReferenceCanvas,
                     referenceCanvasDimenstions, currentStep.minPntDist, currentStep.maxPntDist, currentStep.minTriArea, referenceTransformedCroppingPoints2);
+
                 filteredReferenceImageTrianglesForAllSteps = filteredReferenceImageTrianglesForAllSteps.concat(tempFilteredReferenceImageTriangles);
             }
 
-            drawTriangles(referenceCanvasContext, filteredReferenceImageTrianglesForAllSteps);
+            g_triangleMapByReferenceTriangleIndex = buildReferenceAndInteractiveImageTrianglesByReferenceTriangleIndex(filteredReferenceImageTrianglesForAllSteps, interactiveTrianglesForAllSteps);
+
+            var filteredReferenceImageTrianglesForAllStepsWithoutIndexes = getAllTrianglesFromIndexTriangleObjects(filteredReferenceImageTrianglesForAllSteps);
+            drawTriangles(referenceCanvasContext, filteredReferenceImageTrianglesForAllStepsWithoutIndexes);
             drawTriangles(interactiveCanvasContext, interactiveTrianglesForAllSteps);
         }
         //add triangles to side bar
@@ -948,9 +975,10 @@ function draw() {
 
             $("#triangleListBody").html("");
             for (var i = 0; i < filteredReferenceImageTrianglesForAllSteps.length; i++) {
-                var triangle = filteredReferenceImageTrianglesForAllSteps[i];
-                var triangleString = triangle[0].x + ", " + triangle[0].y + ", " + triangle[1].x + ", " + triangle[1].y + ", " + triangle[2].x + ", " + triangle[2].y;
-                var outputStr = "<tr onmouseover=\"highlightTriangle(" + triangleString + ")\"><td>" + i + "</td><td>" + getArea(triangle) + " </td></tr>";
+                var triangleAndIndex = filteredReferenceImageTrianglesForAllSteps[i];
+                //var triangleString = triangle[0].x + ", " + triangle[0].y + ", " + triangle[1].x + ", " + triangle[1].y + ", " + triangle[2].x + ", " + triangle[2].y;
+                var triangleString = triangleAndIndex.index;
+                var outputStr = "<tr onmouseover=\"highlightTriangle(" + triangleString + ")\"><td>" + i + "</td><td>" + getArea(triangleAndIndex.triangle) + " </td></tr>";
                 $("#triangleListBody").append(outputStr);
             }
             $(".list-group-item").hover(function () {
@@ -966,7 +994,7 @@ function draw() {
     if (g_currentActiveCanvasId == INTERACTIVE_CANVAS_ID) {
         drawCroppingPoints(interactiveCanvasContext, interactiveTransformedCroppingPoints2, true);
         drawCroppingPoints(referenceCanvasContext, referenceTransformedCroppingPoints2, false);
-    }else{
+    } else {
         drawCroppingPoints(interactiveCanvasContext, interactiveTransformedCroppingPoints2, false);
         drawCroppingPoints(referenceCanvasContext, referenceTransformedCroppingPoints2, true);
     }
@@ -988,7 +1016,7 @@ $(document).mousedown(function (e) {
 
 $(document).mousemove(function (e) {
     if (g_isMouseDownAndClickedOnCanvas) {
-        g_highlightedTriangle = null;
+        g_referenceImageHighlightedTriangle = null;
         handleMouseMoveOnDocument(e);
         draw();
     }
@@ -1097,7 +1125,7 @@ function handleMouseUpCrop(mousePosition) {
         croppingPolyPoints = g_referenceCanvasCroppingPolygonPoints;
     }
     var area = calcPolygonArea(croppingPolyPoints);
-    if(area < g_minCroppingPolygonArea){
+    if (area < g_minCroppingPolygonArea) {
         if (g_currentActiveCanvasId == INTERACTIVE_CANVAS_ID) {
             g_interactiveCanvasCroppingPolygonPoints = [];
         } else {
