@@ -818,7 +818,7 @@ function highlightTriangle(referenceTriangleId) {
     var pHash1 = pHash(interactiveFragmentCanvas);
     var pHash2 = pHash(referenceFragmentCanvas);
     var pHashDistance = distance(pHash1, pHash2);
-    $("#pHashDistanceOutputWrapper").html("<h1>"+pHashDistance+"</h1>");
+    $("#pHashDistanceOutputWrapper").html(""+pHashDistance+"");
 }
 
 function drawBackgroudImageWithTransformationMatrix(canvasContext, image, transformationMat) {
@@ -1163,7 +1163,8 @@ function draw() {
                 var triangleAndIndex = filteredReferenceImageTrianglesForAllSteps[i];
                 //var triangleString = triangle[0].x + ", " + triangle[0].y + ", " + triangle[1].x + ", " + triangle[1].y + ", " + triangle[2].x + ", " + triangle[2].y;
                 var triangleString = triangleAndIndex.index;
-                var outputStr = "<tr onmouseover=\"highlightTriangle(" + triangleString + ")\"><td>" + i + "</td><td>" + getArea(triangleAndIndex.triangle) + " </td></tr>";
+                var area = getArea(triangleAndIndex.triangle);
+                var outputStr = "<tr onmouseover=\"highlightTriangle(" + triangleString + ")\"><td>" + i + "</td><td>" + Math.round(area) + " </td></tr>";
                 $("#triangleListBody").append(outputStr);
             }
             $(".list-group-item").hover(function () {

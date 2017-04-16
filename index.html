@@ -1,5 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
 <head>
     <!-- Required meta tags -->
     <meta charset="utf-8">
@@ -25,6 +23,7 @@
             background-color: #f7f7f7;
             width: 100%;
             min-width: 1200px;
+            padding-bottom: 60px;
         }
 
         .bigBlueInner {
@@ -118,6 +117,50 @@
             display: block;
         }
 
+        .aboutArea {
+            width: 1200px;
+            padding: 40px 60px;
+            margin: auto;
+        }
+
+        .smallCanvasWrapper {
+            width: 750px;
+            padding-right: 20px;
+            height: 200px;
+        }
+
+        #fragmentCanvas2 {
+
+            float: right;
+        }
+        .distanceOutput{
+            display: inline-block;
+            width: 328px;
+            margin: 0px;
+        }
+        .distanceOutputTitle{
+            padding-top: 30px;
+            font-size: 16px;
+            color: rgba(0,0,0,.87);
+            text-align: center;
+            width: 100%;
+        }
+        .distanceOutputData{
+            width: 100%;
+            text-align: center;
+            font-size: 20px;
+            color: black;
+        }
+        .fragmentCanvas1Wrapper{
+            display: inline-block;
+            width: 200px;
+            float: left;
+        }
+        .fragmentCanvas2Wrapper{
+            display: inline-block;
+            width: 200px;
+            float: right;
+        }
     </style>
 </head>
 <body>
@@ -130,15 +173,18 @@
     </div>
     <div class="buttonsWrapper">
         <span>Transformations:</span>
-        <div class="buttons"  >
+        <div class="buttons">
             <span data-toggle="buttons">
-                <label class="btn btn-secondary active" onclick="setCurrnetOperation(enum_TransformationOperation.TRANSLATE)">
+                <label class="btn btn-secondary active"
+                       onclick="setCurrnetOperation(enum_TransformationOperation.TRANSLATE)">
                     <input type="radio" name="options" autocomplete="off" checked>Move</input>
                 </label>
-                <label class="btn btn-secondary" onclick="setCurrnetOperation(enum_TransformationOperation.NON_UNIFORM_SCALE)">
+                <label class="btn btn-secondary"
+                       onclick="setCurrnetOperation(enum_TransformationOperation.NON_UNIFORM_SCALE)">
                     <input type="radio" name="options" autocomplete="off">Scale</input>
                 </label>
-                <label class="btn btn-secondary" onclick="setCurrnetOperation(enum_TransformationOperation.UNIFORM_SCALE)">
+                <label class="btn btn-secondary"
+                       onclick="setCurrnetOperation(enum_TransformationOperation.UNIFORM_SCALE)">
                     <input type="radio" name="options" autocomplete="off">Uniform Scale</input>
                 </label>
                 <label class="btn btn-secondary" onclick="setCurrnetOperation(enum_TransformationOperation.ROTATE)">
@@ -150,8 +196,8 @@
             </span>
             <!--<button class="btn btn-default" onclick="toggleDrawKeypointsMode()" >Toggle DrawKeypoints</button>-->
             <!--<button class="btn btn-default" style="float:right;" onclick="callSearch()">CompareImages</button>-->
-            <span style="float: right"  data-toggle="buttons">                
-                <label class="btn btn-secondary"  onclick="toggleDrawUIOverlayMode()">
+            <span style="float: right" data-toggle="buttons">
+                <label class="btn btn-secondary" onclick="toggleDrawUIOverlayMode()">
                     <input type="checkbox" name="options2" autocomplete="off">Hide UI Overlay</input>
                 </label>
             </span>
@@ -188,13 +234,17 @@
                 </div>
             </div>
             <div id="output">
-                <div class="smallCanvasWrapper mainCol">
-                    <canvas id="fragmentCanvas1" height="200" width="200"></canvas>
-                </div>
-                <div class="smallCanvasWrapper mainCol">
-                    <canvas id="fragmentCanvas2" height="200" width="200"></canvas>
-                </div>
-                <div id="pHashDistanceOutputWrapper" class="smallCanvasWrapper mainCol">
+                <div class="smallCanvasWrapper">
+                    <div class="fragmentCanvas1Wrapper">
+                        <canvas id="fragmentCanvas1" height="200" width="200"></canvas>
+                    </div>
+                    <div class="distanceOutput">
+                        <label class="distanceOutputTitle">Perceptual hash distance:</label>
+                        <label id="pHashDistanceOutputWrapper" class="distanceOutputData">Hover over a result in the result list to see the hashing distance. </label>
+                    </div>
+                    <div class="fragmentCanvas2Wrapper">
+                        <canvas id="fragmentCanvas2" height="200" width="200"></canvas>
+                    </div>
                 </div>
 
                 <!--<span id="searchResultsOutput">-->
@@ -205,6 +255,10 @@
             </div>
         </div>
     </div>
+    <!--<div class="aboutArea">-->
+    <!--<h1>About</h1>-->
+    <!--<p>Stuff here....</p>-->
+    <!--</div>-->
 </div>
 <svg id="lineSvgTag" style="display: inline;position: absolute; min-height: 4px;min-width: 4px;">
     <line id="line" x1="0" y1="0" x2="0" y2="0" style="stroke:rgb(255,0,0);stroke-width:2"/>
