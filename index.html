@@ -13,24 +13,16 @@
             font-family: "Roboto", "Helvetica", "Arial", sans-serif;
         }
 
-        #bigBlueOuter {
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            -khtml-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-            background-color: #f7f7f7;
-            width: 100%;
-            min-width: 1200px;
-            padding-bottom: 60px;
-        }
-
-        .bigBlueInner {
+        #mainContentContainer {
             padding: 0px 30px;
             margin: 0px auto;
-            width: 1200px;
+            width: 1000px;
             display: block;
+        }
+
+        .bigCanvasContainer {
+            width: 700px;
+            float: left;
         }
 
         .move {
@@ -47,7 +39,7 @@
 
         #triangleOutputList {
             max-width: 400px;
-            height: 400px;
+            height: 320px;
             overflow: auto;
             margin-top: 20px;
         }
@@ -57,26 +49,26 @@
         }
 
         .canvasWrapper {
-            display: inline-block;
-            max-width: 385px;
-            margin: auto;
+            display: block;
+            width: 330px;
+            float: left;
         }
 
         .trianglesListWrapper {
-            height: 410px;
+            height: 550px;
             display: inline-block;
         }
 
         .trianglesListInnerWrapper {
-            height: 370px;
+            height: 480px;
             display: block;
             overflow: auto;
             border-bottom: 1px solid rgba(0, 0, 0, 0.19);
         }
 
-        .triangleList {
+        .table-striped > tbody > tr:nth-child(2n+1) > td, .table-striped > tbody > tr:nth-child(2n+1) > th {
+            background-color: rgba(0,0,0,0.01);
         }
-
         .triangleListBody {
             overflow: auto;
         }
@@ -84,7 +76,7 @@
         .header {
             background-color: #183D4E;
             width: 100%;
-            min-width: 1200px;
+            min-width: 1000px;
             color: #ffffff;
             overflow: hidden;
             font-family: "Roboto", "Helvetica", "Arial", sans-serif;
@@ -92,22 +84,19 @@
         }
 
         .headerInner {
-            margin: 60px auto;
+            margin: 48px auto;
             width: 1140px;
         }
-
+        .headerInner h1{
+            font-size: 32px;
+        }
         .buttonsWrapper {
             margin: 5px auto 10px auto;
             padding: 0px 30px;
-            width: 1200px;
+            width: 1000px;
         }
 
         .buttons {
-        }
-
-        .mainCol {
-            width: 375px;
-            display: inline-block;
         }
 
         .canvasTitle {
@@ -118,7 +107,7 @@
         }
 
         .aboutArea {
-            width: 1200px;
+            width: 1000px;
             padding: 40px 60px;
             margin: auto;
         }
@@ -134,9 +123,8 @@
             float: right;
         }
         .distanceOutput{
-            display: inline-block;
-            width: 328px;
-            margin: 0px;
+            width: 212px;
+            float: left;
         }
         .distanceOutputTitle{
             padding-top: 30px;
@@ -151,15 +139,24 @@
             font-size: 20px;
             color: black;
         }
-        .fragmentCanvas1Wrapper{
-            display: inline-block;
+        .fragmentCanvasWrapper{
             width: 200px;
-            float: left;
+            float:left;
         }
-        .fragmentCanvas2Wrapper{
-            display: inline-block;
-            width: 200px;
-            float: right;
+        .mainContentContainerWrapper{
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            background-color: #f7f7f7;
+            width: 100%;
+            min-width: 1000px;
+            padding-bottom: 60px;
+        }
+        .transformationsLabel{
+            font-size: 12px;
         }
     </style>
 </head>
@@ -168,11 +165,9 @@
     <div class="header">
         <div class="headerInner">
             <h1>Image Matching Demo</h1>
-            <p>Click and drag on an image to apply a transformation.</p>
         </div>
     </div>
     <div class="buttonsWrapper">
-        <span>Transformations:</span>
         <div class="buttons">
             <span data-toggle="buttons">
                 <label class="btn btn-secondary active"
@@ -205,54 +200,59 @@
         <div style="float: right">
         </div>
     </div>
-    <div id="bigBlueOuter" class="">
-        <div id="bigBlueInner" class="row bigBlueInner">
-            <div class="canvasWrapper mainCol">
-                <span class="canvasTitle">Query Image</span>
-                <canvas id="interactiveCanvas" width="350" height="350"></canvas>
-                <p id="number_of_triangles_output"></p>
+    <div class="mainContentContainerWrapper">
+        <div id="mainContentContainer" class="">
+            <div class="clickAndDragTitle">
+                <p>Click and drag on an image to apply a transformation.</p>
             </div>
-            <div class="canvasWrapper mainCol">
-                <span class="canvasTitle">Matching Image</span>
-                <canvas id="referenceCanvas" width="350" height="350"></canvas>
-                <p id="number_of_matching_triangles_output"></p>
-            </div>
-            <div class="mainCol trianglesListWrapper">
-                <span class="canvasTitle">Results</span>
-                <div class="trianglesListInnerWrapper">
-                    <table class="triangleList table table-hover">
-                        <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Area</th>
-                        </tr>
-                        </thead>
-                        <tbody id="triangleListBody" role="menu">
+            <div id="bigCanvasContainer" class="row bigCanvasContainer">
+                <div class="canvasWrapper">
+                    <span class="canvasTitle">Query Image</span>
+                    <canvas id="interactiveCanvas" width="280" height="280"></canvas>
+                    <p id="number_of_triangles_output"></p>
+                </div>
+                <div class="canvasWrapper">
+                    <span class="canvasTitle">Matching Image</span>
+                    <canvas id="referenceCanvas" width="280" height="280"></canvas>
+                    <p id="number_of_matching_triangles_output"></p>
+                </div>
+                <div id="output">
+                    <div class="smallCanvasWrapper">
+                        <div class="fragmentCanvasWrapper">
+                            <canvas id="fragmentCanvas1" height="160" width="160"></canvas>
+                        </div>
+                        <div class="distanceOutput">
+                            <label class="distanceOutputTitle">Perceptual hash distance:</label>
+                            <label id="pHashDistanceOutputWrapper" class="distanceOutputData">Hover over a result in the result list to see the hashing distance. </label>
+                        </div>
+                        <div class="fragmentCanvasWrapper">
+                            <canvas id="fragmentCanvas2" height="160" width="160"></canvas>
+                        </div>
+                    </div>
 
-                        </tbody>
-                    </table>
+                    <!--<span id="searchResultsOutput">-->
+                    <!--<div id="searchResultsOutputDiv" class="alert alert-success" role="alert">-->
+                    <!--<strong>Matched!</strong> X matches found-->
+                    <!--</div>-->
+                    <!--</span>-->
                 </div>
             </div>
-            <div id="output">
-                <div class="smallCanvasWrapper">
-                    <div class="fragmentCanvas1Wrapper">
-                        <canvas id="fragmentCanvas1" height="200" width="200"></canvas>
-                    </div>
-                    <div class="distanceOutput">
-                        <label class="distanceOutputTitle">Perceptual hash distance:</label>
-                        <label id="pHashDistanceOutputWrapper" class="distanceOutputData">Hover over a result in the result list to see the hashing distance. </label>
-                    </div>
-                    <div class="fragmentCanvas2Wrapper">
-                        <canvas id="fragmentCanvas2" height="200" width="200"></canvas>
+            <div class="trianglesListWrapper">
+                    <span class="canvasTitle">Results</span>
+                    <div class="trianglesListInnerWrapper">
+                        <table class="triangleList table table-striped table-hover">
+                            <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Area</th>
+                            </tr>
+                            </thead>
+                            <tbody id="triangleListBody" role="menu">
+
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-
-                <!--<span id="searchResultsOutput">-->
-                <!--<div id="searchResultsOutputDiv" class="alert alert-success" role="alert">-->
-                <!--<strong>Matched!</strong> X matches found-->
-                <!--</div>-->
-                <!--</span>-->
-            </div>
         </div>
     </div>
     <!--<div class="aboutArea">-->

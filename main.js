@@ -8,8 +8,8 @@
 //global vars
 
 var g_targetTriangleScale = {
-    x: 200,
-    y: 200
+    x: 160,
+    y: 160
 }
 const INTERACTIVE_CANVAS_ID = "interactiveCanvas";
 const REFERENCE_CANVAS_ID = "referenceCanvas";
@@ -54,30 +54,30 @@ var g_steps = [
         colour: [100, 250, 250],
     },
     {
-        minPntDist: 200,
-        maxPntDist: 250,
+        minPntDist: 50,
+        maxPntDist: 450,
         minTriArea: 30,
         colour: [100, 255, 100],
     },
-    {
-        minPntDist: 250,
-        maxPntDist: 300,
-        minTriArea: 30,
-        colour: [255, 255, 0],
-    },
-    {
-        minPntDist: 300,
-        maxPntDist: 350,
-        minTriArea: 30,
-        colour: [255, 200, 200],
-    },
-    {
-        minPntDist: 350,
-        maxPntDist: 400,
-        minTriArea: 30,
-        colour: [120, 250, 120],
-    },
-]
+    // {
+    //     minPntDist: 250,
+    //     maxPntDist: 300,
+    //     minTriArea: 30,
+    //     colour: [255, 255, 0],
+    // },
+    // {
+    //     minPntDist: 300,
+    //     maxPntDist: 350,
+    //     minTriArea: 30,
+    //     colour: [255, 200, 200],
+    // },
+    // {
+    //     minPntDist: 350,
+    //     maxPntDist: 450,
+    //     minTriArea: 30,
+    //     colour: [120, 250, 120],
+    // },
+];
 
 var g_currentActiveCanvasId = INTERACTIVE_CANVAS_ID
 
@@ -255,7 +255,7 @@ function callSearch() {
 
 // https://ironchef-team21.googlecode.com/git-history/75856e07bb89645d0e56820d6e79f8219a06bfb7/ironchef_team21/src/ImagePHash.java
 
-function pHash(img){
+function pHash(img) {
     var size = 32,
         smallerSize = 8;
 
@@ -283,8 +283,8 @@ function pHash(img){
      */
 
     var vals = new Float64Array(size * size);
-    for(var i = 0; i < size; i++){
-        for(var j = 0; j < size; j++){
+    for (var i = 0; i < size; i++) {
+        for (var j = 0; j < size; j++) {
             var base = 4 * (size * i + j);
             vals[size * i + j] = 0.299 * im.data[base] +
                 0.587 * im.data[base + 1] +
@@ -298,10 +298,10 @@ function pHash(img){
      * a 32x32 DCT.
      */
 
-    function applyDCT2(N, f){
+    function applyDCT2(N, f) {
         // initialize coefficients
         var c = new Float64Array(N);
-        for(var i = 1; i < N; i++) c[i] = 1;
+        for (var i = 1; i < N; i++) c[i] = 1;
         c[0] = 1 / Math.sqrt(2);
 
         // output goes here
@@ -310,21 +310,21 @@ function pHash(img){
         // construct a lookup table, because it's O(n^4)
         var entries = (2 * N) * (N - 1);
         var COS = new Float64Array(entries);
-        for(var i = 0; i < entries; i++)
+        for (var i = 0; i < entries; i++)
             COS[i] = Math.cos(i / (2 * N) * Math.PI);
 
         // the core loop inside a loop inside a loop...
-        for(var u = 0; u < N; u++){
-            for(var v = 0; v < N; v++){
+        for (var u = 0; u < N; u++) {
+            for (var v = 0; v < N; v++) {
                 var sum = 0;
-                for(var i = 0; i < N; i++){
-                    for(var j = 0; j < N; j++){
+                for (var i = 0; i < N; i++) {
+                    for (var j = 0; j < N; j++) {
                         sum += COS[(2 * i + 1) * u]
                             * COS[(2 * j + 1) * v]
                             * f[N * i + j];
                     }
                 }
-                sum *= ((c[u] * c[v])/4);
+                sum *= ((c[u] * c[v]) / 4);
                 F[N * u + v] = sum;
             }
         }
@@ -346,8 +346,8 @@ function pHash(img){
      */
 
     var vals = []
-    for(var x = 1; x <= smallerSize; x++){
-        for(var y = 1; y <= smallerSize; y++){
+    for (var x = 1; x <= smallerSize; x++) {
+        for (var y = 1; y <= smallerSize; y++) {
             vals.push(dctVals[size * x + y])
         }
     }
@@ -359,7 +359,7 @@ function pHash(img){
      * the other values and will throw off the average).
      */
 
-    var median = vals.slice(0).sort(function(a, b){
+    var median = vals.slice(0).sort(function (a, b) {
         return a - b
     })[Math.floor(vals.length / 2)];
 
@@ -374,19 +374,18 @@ function pHash(img){
      * adjustments without a problem.
      */
 
-    return vals.map(function(e){
+    return vals.map(function (e) {
         return e > median ? '1' : '0';
     }).join('');
 }
 
 
-function distance(a, b){
+function distance(a, b) {
     var dist = 0;
-    for(var i = 0; i < a.length; i++)
-        if(a[i] != b[i]) dist++;
+    for (var i = 0; i < a.length; i++)
+        if (a[i] != b[i]) dist++;
     return dist;
 }
-
 
 
 // #     #
@@ -437,7 +436,7 @@ function getTargetTriangleRotated180() {
     return targetTriangle;
 }
 
-function getTargetTriangle(){
+function getTargetTriangle() {
     var targetTriangle = [
         {x: 0, y: 0},
         {x: .5 * g_targetTriangleScale.x, y: 1 * g_targetTriangleScale.y},
@@ -469,9 +468,9 @@ function calcTransformationMatrixToEquilateralTriangle(inputTriangle) {
     //move to 0,0
     //move to 0,0
     var tranlateMat = [
-        [ 1.0, 0.0, -pt0.x],
-        [ 0.0, 1.0, -pt0.y],
-        [ 0.0, 0.0, 1.0]
+        [1.0, 0.0, -pt0.x],
+        [0.0, 1.0, -pt0.y],
+        [0.0, 0.0, 1.0]
     ];
     var result = getIdentityMatrix();
     result = matrixMultiply(result, targetTriangleMat);
@@ -766,13 +765,15 @@ function k_combinations(set, k) {
 
 function drawFragment(baseCanvas, fragmentCanvasContext, baseTransformationMatrix, fragmentTriangle) {
     fragmentCanvasContext.save();
-    fragmentCanvasContext.translate(fragmentCanvasContext.canvas.width/2, fragmentCanvasContext.canvas.height/2);
-    fragmentCanvasContext.rotate(180.0 * Math.PI/180);
-    fragmentCanvasContext.translate(-fragmentCanvasContext.canvas.width/2, -fragmentCanvasContext.canvas.height/2);
+    fragmentCanvasContext.translate(fragmentCanvasContext.canvas.width / 2, fragmentCanvasContext.canvas.height / 2);
+    fragmentCanvasContext.rotate(180.0 * Math.PI / 180);
+    fragmentCanvasContext.translate(-fragmentCanvasContext.canvas.width / 2, -fragmentCanvasContext.canvas.height / 2);
     var mat = getIdentityMatrix();//baseTransformationMatrix;
     var mat2 = calcTransformationMatrixToEquilateralTriangle(fragmentTriangle);
     mat = matrixMultiply(mat2, mat);
-    fragmentCanvasContext.clearRect(0, 0, g_targetTriangleScale.x, g_targetTriangleScale.y)
+    fragmentCanvasContext.clearRect(0, 0, g_targetTriangleScale.x, g_targetTriangleScale.y);
+    fragmentCanvasContext.fillStyle = "#FFFFFF";
+    fragmentCanvasContext.fillRect(0, 0, g_targetTriangleScale.x, g_targetTriangleScale.y);
     fragmentCanvasContext.transform(mat[0][0], mat[1][0], mat[0][1], mat[1][1], mat[0][2], mat[1][2]);
     fragmentCanvasContext.drawImage(baseCanvas, 0, 0)
     fragmentCanvasContext.restore();
@@ -818,7 +819,7 @@ function highlightTriangle(referenceTriangleId) {
     var pHash1 = pHash(interactiveFragmentCanvas);
     var pHash2 = pHash(referenceFragmentCanvas);
     var pHashDistance = distance(pHash1, pHash2);
-    $("#pHashDistanceOutputWrapper").html(""+pHashDistance+"");
+    $("#pHashDistanceOutputWrapper").html("" + pHashDistance + "");
 }
 
 function drawBackgroudImageWithTransformationMatrix(canvasContext, image, transformationMat) {
@@ -1082,7 +1083,11 @@ function draw() {
     var referenceCanvasContext = document.getElementById('referenceCanvas').getContext('2d');
     var transformationChanges = getTransformationChanges();
     interactiveCanvasContext.clearRect(0, 0, 512, 512); // clear canvas
+    interactiveCanvasContext.fillStyle = "#FFFFFF";
+    interactiveCanvasContext.fillRect(0, 0, 512, 512); // clear canvas
     referenceCanvasContext.clearRect(0, 0, 512, 512); // clear canvas
+    referenceCanvasContext.fillStyle = "#FFFFFF";
+    referenceCanvasContext.fillRect(0, 0, 512, 512); // clear canvas
 
     var interactiveImageTransformations = getInteractiveImageTransformations();
     var referenceImageTransformations = getReferenceImageTransformations();
@@ -1375,10 +1380,17 @@ function handleMouseMoveUniformScale(pageMousePosition) {
     var y = (pageMousePosition.y - mouseDownPoint.y);
     var x = (pageMousePosition.x - mouseDownPoint.x);
 
-    scale = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
-    scale /= 100;
-    if (scale < .1)
-        scale = .1;
+    scale = y;//(Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)));
+
+    if (y > 0) {
+        scale = 100+y;
+        scale = 1/(scale/100);
+    }else{
+        scale = y*-1;//make y positive
+        scale += 100;
+        scale /= 100;
+    }
+
     g_transformationChanges.uniformScale = scale;
 }
 
@@ -1509,8 +1521,10 @@ function handleMouseDownOnCanvas(e) {
 function applyTransformationEffects(state) {
     if (state == enum_TransformationOperation.TRANSLATE) {
         $("#interactiveCanvas").addClass("move");
+        $("#referenceCanvas").addClass("move");
     } else {
         $("#interactiveCanvas").removeClass("move");
+        $("#referenceCanvas").removeClass("move");
     }
 }
 
@@ -1539,4 +1553,4 @@ function loadImageAndInit(imageSrc) {
 
 //loadImageAndInit('rick1.jpg');
 
-loadImageAndInit('dog1_resize2.jpg');
+loadImageAndInit('dog1_resize3.jpg');
