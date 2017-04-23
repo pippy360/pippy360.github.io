@@ -809,8 +809,8 @@ function highlightTriangle(referenceTriangleId) {
 
     // referenceCanvasContext.rotate(20*Math.PI/180);
     g_enableFillEffect = true;
-    drawTriangleWithColour(referenceCanvasContext, g_referenceImageHighlightedTriangle, [255, 255, 255], [255, 0, 0])
-    drawTriangleWithColour(interactiveCanvasContext, g_interactiveImageHighlightedTriangle, [255, 255, 255], [255, 0, 0])
+    drawTriangleWithColour(referenceCanvasContext, g_referenceImageHighlightedTriangle, [255, 255, 255], [24, 61, 78])
+    drawTriangleWithColour(interactiveCanvasContext, g_interactiveImageHighlightedTriangle, [255, 255, 255], [24, 61, 78])
     g_enableFillEffect = false;
 
     drawCroppingPoints(referenceFragmentCanvasContext, getTargetTriangleRotated180(), false)
@@ -820,6 +820,9 @@ function highlightTriangle(referenceTriangleId) {
     var pHash2 = pHash(referenceFragmentCanvas);
     var pHashDistance = distance(pHash1, pHash2);
     $("#pHashDistanceOutputWrapper").html("" + pHashDistance + "");
+
+    $(".triangleTRAll").removeClass("selectedTriangleTR");
+    $(".triangleTR" + referenceTriangleId).addClass("selectedTriangleTR");
 }
 
 function drawBackgroudImageWithTransformationMatrix(canvasContext, image, transformationMat) {
@@ -848,7 +851,7 @@ function drawTriangleWithColour(ctx, tri, strokeColour, fillColour) {
     var alpha = 1.0;
     ctx.strokeStyle = 'rgba(' + strokeColour[0] + ', ' + strokeColour[1] + ' ,' + strokeColour[2] + ', ' + alpha + ')';
     //ctx.fillStyle = 'rgba(255, 255, 255, 0.09)';
-    ctx.fillStyle = 'rgba(' + fillColour[0] + ', ' + fillColour[1] + ' ,' + fillColour[2] + ', ' + alpha + ')';
+    ctx.fillStyle = 'rgba(' + fillColour[0] + ', ' + fillColour[1] + ' ,' + fillColour[2] + ', ' + .9 + ')';
     ctx.beginPath();
     ctx.moveTo(tri[0].x, tri[0].y);
     ctx.lineTo(tri[1].x, tri[1].y);
@@ -1169,7 +1172,7 @@ function draw() {
                 //var triangleString = triangle[0].x + ", " + triangle[0].y + ", " + triangle[1].x + ", " + triangle[1].y + ", " + triangle[2].x + ", " + triangle[2].y;
                 var triangleString = triangleAndIndex.index;
                 var area = getArea(triangleAndIndex.triangle);
-                var outputStr = "<tr onmouseover=\"highlightTriangle(" + triangleString + ")\"><td>" + i + "</td><td>" + Math.round(area) + " </td></tr>";
+                var outputStr = "<tr class=\"triangleTRAll triangleTR"+triangleString+"\" onmouseover=\"highlightTriangle(" + triangleString + ")\"><td>" + i + "</td><td>" + Math.round(area) + " </td></tr>";
                 $("#triangleListBody").append(outputStr);
             }
             $(".list-group-item").hover(function () {
