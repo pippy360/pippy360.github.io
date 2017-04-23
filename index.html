@@ -16,12 +16,12 @@
         #mainContentContainer {
             padding: 0px 30px;
             margin: 0px auto;
-            width: 1000px;
+            width: 1200px;
             display: block;
         }
 
         .bigCanvasContainer {
-            width: 580px;
+            /*width: 580px;*/
             float: left;
         }
 
@@ -50,14 +50,19 @@
 
         .canvasWrapper {
             display: block;
-            width: 285px;
+            /*width: 285px;*/
             float: left;
+            margin-top: 25px;
+            margin-bottom: 40px;
+            margin-right: 50px;
         }
 
         .trianglesListWrapper {
+            margin-left: 40px;
             height: 550px;
-            width: 360px;
+            width: 400px;
             display: inline-block;
+            float: right;
         }
 
         .trianglesListInnerWrapper {
@@ -78,7 +83,7 @@
         .header {
             background-color: #183D4E;
             width: 100%;
-            min-width: 1000px;
+            min-width: 1200px;
             color: #ffffff;
             overflow: hidden;
             font-family: "Roboto", "Helvetica", "Arial", sans-serif;
@@ -97,27 +102,39 @@
         .buttonsWrapper {
             margin: 8px auto 0px auto;
             padding: 0px 30px;
-            width: 1000px;
+            width: 1200px;
         }
 
         .buttons {
         }
 
         .canvasTitle {
-            color: #000;
-            padding-bottom: 10px;
+            color: rgba(0, 0, 0, .8);
             padding-top: 10px;
             display: block;
+            font-size: 12px;
+            margin-bottom: 5px;
+            padding-bottom: 0px;
         }
-
+        canvas {
+            box-shadow: 0px 0px 8px 2px rgba(24,61,78,.2);
+        }
+        .triangleCountOutput {
+            color: rgba(0, 0, 0, .8);
+            display: block;
+            font-size: 12px;
+            margin: 0px;
+            padding: 0px;
+            margin-top: 3px;
+        }
         .aboutArea {
-            width: 1000px;
+            width: 1200px;
             padding: 40px 60px;
             margin: auto;
         }
 
         .smallCanvasWrapper {
-            width: 750px;
+            /*width: 750px;*/
             padding-right: 20px;
             height: 200px;
         }
@@ -148,7 +165,7 @@
         }
 
         .fragmentCanvasWrapper {
-            width: 165px;
+            /*width: 165px;*/
             float: left;
         }
 
@@ -161,8 +178,9 @@
             user-select: none;
             background-color: #f7f7f7;
             width: 100%;
-            min-width: 1000px;
+            min-width: 1200px;
             padding-bottom: 60px;
+            height: 600px;
         }
 
         .transformationsLabel {
@@ -222,14 +240,14 @@
             </div>
             <div id="bigCanvasContainer" class="bigCanvasContainer">
                 <div class="canvasWrapper">
-                    <span class="canvasTitle">Query Image</span>
+                    <label class="canvasTitle">Query Image</label>
                     <canvas id="interactiveCanvas" width="280" height="280"></canvas>
-                    <p id="number_of_triangles_output"></p>
+                    <label class="triangleCountOutput" id="number_of_triangles_output"></label>
                 </div>
                 <div class="canvasWrapper">
-                    <span class="canvasTitle">Matching Image</span>
+                    <label class="canvasTitle">Image Stored In Database</label>
                     <canvas id="referenceCanvas" width="280" height="280"></canvas>
-                    <p id="number_of_matching_triangles_output"></p>
+                    <label class="triangleCountOutput" id="number_of_matching_triangles_output"></label>
                 </div>
                 <div id="output">
                     <div class="smallCanvasWrapper">
