@@ -54,7 +54,7 @@
             float: left;
             margin-top: 25px;
             margin-bottom: 40px;
-            margin-right: 50px;
+            margin-right: 68px;
         }
 
         .trianglesListWrapper {
@@ -63,10 +63,16 @@
             width: 400px;
             display: inline-block;
             float: right;
+            margin-top: 40px;
+        }
+
+        .distanceOutputHelpMessage {
+            padding: 8px;
+            text-align: center;
         }
 
         .trianglesListInnerWrapper {
-            height: 480px;
+            height: 410px;
             display: block;
             overflow: auto;
             border-bottom: 1px solid rgba(0, 0, 0, 0.19);
@@ -116,9 +122,16 @@
             margin-bottom: 5px;
             padding-bottom: 0px;
         }
-        canvas {
-            box-shadow: 0px 0px 8px 2px rgba(24,61,78,.2);
+
+        .resultsTitle {
+            /*width: 100%;*/
+            /*text-align: center;*/
         }
+
+        canvas {
+            box-shadow: 0px 0px 8px 2px rgba(24, 61, 78, .2);
+        }
+
         .triangleCountOutput {
             color: rgba(0, 0, 0, .8);
             display: block;
@@ -127,6 +140,7 @@
             padding: 0px;
             margin-top: 3px;
         }
+
         .aboutArea {
             width: 1200px;
             padding: 40px 60px;
@@ -145,7 +159,7 @@
         }
 
         .distanceOutput {
-            width: 212px;
+            width: 308px;
             float: left;
         }
 
@@ -256,8 +270,7 @@
                         </div>
                         <div class="distanceOutput">
                             <label class="distanceOutputTitle">Perceptual hash distance:</label>
-                            <label id="pHashDistanceOutputWrapper" class="distanceOutputData">Hover over a result in the
-                                result list to see the hashing distance. </label>
+                            <label id="pHashDistanceOutputWrapper" class="distanceOutputData"> 0 </label>
                         </div>
                         <div class="fragmentCanvasWrapper">
                             <canvas id="fragmentCanvas2" height="160" width="160"></canvas>
@@ -272,7 +285,9 @@
                 </div>
             </div>
             <div class="trianglesListWrapper">
-                <span class="canvasTitle">Results</span>
+                <p class="alert-warning distanceOutputHelpMessage">Hover over a result in the
+                    list below to see the matched image fragments. </p>
+                <h5 class="resultsTitle">Results</h5>
                 <div class="trianglesListInnerWrapper">
                     <table class="triangleList table ">
                         <thead>
