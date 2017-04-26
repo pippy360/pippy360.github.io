@@ -1373,7 +1373,10 @@ function handleMouseMoveNonUniformScale(pageMousePosition) {
     }
     direction = extraRotation % 360;
     scale = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
-    scale /= 100;
+    scale /= 25;
+    if(scale < 1) {
+        scale = 1;
+    }
     scaleMatrix = getDirectionalScaleMatrix(Math.sqrt(scale), 1 / Math.sqrt(scale), -direction);
     g_transformationChanges.directionalScaleMatrix = scaleMatrix;
 }
