@@ -1069,12 +1069,52 @@ function getAllTrianglesFromIndexTriangleObjects(trianglesAndIndex) {
     return ret;
 }
 
+function containsMatchingPoint(tri, currPt) {
+    for (var i = 0; i < tri.length; i++) {
+        var comparePt = tri[i];
+        if(comparePt.x == currPt.x && comparePt.y == currPt.y){
+            return true;
+        }
+    }
+    return false;
+}
+
+function compareTriangles(tri1, tri2) {
+    for (var i = 0; i < tri1.length; i++) {
+        var currPt = tri1[i];
+        if (containsMatchingPoint(tri2, currPt)){
+
+        } else {
+            //if any of the points don't match it's not a matching triangle
+            return false;
+        }
+    }
+    return true;
+}
+
+function containsMatchingTriangle(addedReferenceTriangles, refTri) {
+    for (var i = 0; i < addedReferenceTriangles.length; i++) {
+        var currTri = addedReferenceTriangles[i];
+        if (compareTriangles(refTri, currTri)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 function buildReferenceAndInteractiveImageTrianglesByReferenceTriangleIndex(referenceTriangleAndIndex, interactiveTrianglesForAllSteps) {
     var ret = new Map();
+    var addedReferenceTriangles = [];
     for (var i = 0; i < referenceTriangleAndIndex.length; i++) {
         var refTri = referenceTriangleAndIndex[i].triangle;
         var intTri = interactiveTrianglesForAllSteps[referenceTriangleAndIndex[i].index];
-        ret.set(referenceTriangleAndIndex[i].index, {referenceTriangle: refTri, interactiveTriangle: intTri});
+        //FIXME: this duplicate detection is a really horrible hack!!!
+        if (containsMatchingTriangle(addedReferenceTriangles, refTri)) {
+            //skip we don't want to add duplicate triangles
+        } else {
+            ret.set(referenceTriangleAndIndex[i].index, {referenceTriangle: refTri, interactiveTriangle: intTri});
+            addedReferenceTriangles.push(refTri);
+        }
     }
     return ret;
 }
@@ -1149,6 +1189,9 @@ function draw() {
             var trianglesProjectedOntoReferenceCanvas = computeTransformedTrianglesWithMatrix(interactiveTrianglesForAllSteps, projectionMatrix);
 
             for (var i = 0; i < g_steps.length; i++) {
+
+                //FIXME: this doesn't handle duplicates
+
                 var currentStep = g_steps[i];
                 var tempFilteredReferenceImageTriangles = filterInvalidTriangles(trianglesProjectedOntoReferenceCanvas,
                     referenceCanvasDimenstions, currentStep.minPntDist, currentStep.maxPntDist, currentStep.minTriArea, referenceTransformedCroppingPoints2);
@@ -1167,12 +1210,16 @@ function draw() {
         if (!g_skipListGen) {
 
             $("#triangleListBody").html("");
-            for (var i = 0; i < filteredReferenceImageTrianglesForAllSteps.length; i++) {
-                var triangleAndIndex = filteredReferenceImageTrianglesForAllSteps[i];
-                //var triangleString = triangle[0].x + ", " + triangle[0].y + ", " + triangle[1].x + ", " + triangle[1].y + ", " + triangle[2].x + ", " + triangle[2].y;
-                var triangleString = triangleAndIndex.index;
-                var area = getArea(triangleAndIndex.triangle);
-                var outputStr = "<tr class=\"triangleTRAll triangleTR"+triangleString+"\" onmouseover=\"highlightTriangle(" + triangleString + ")\"><td>" + i + "</td><td>" + Math.round(area) + " </td></tr>";
+            var keys = g_triangleMapByReferenceTriangleIndex.keys();
+            for (var key = keys.next(); !key.done; key = keys.next()) { //iterate over keys
+                var triangleString = key.value;
+                var tri = g_triangleMapByReferenceTriangleIndex.get(key.value).referenceTriangle;
+                var area = getArea(tri);
+                var outputStr =
+                    "<tr class=\"triangleTRAll triangleTR" + triangleString + "\" onmouseover=\"highlightTriangle(" + triangleString + ")\">" +
+                    "<td>" + key.value + "</td>" +
+                    "<td>" + Math.round(area) + " </td>" +
+                    "</tr>";
                 $("#triangleListBody").append(outputStr);
             }
             $(".list-group-item").hover(function () {
@@ -1374,7 +1421,7 @@ function handleMouseMoveNonUniformScale(pageMousePosition) {
     direction = extraRotation % 360;
     scale = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
     scale /= 25;
-    if(scale < 1) {
+    if (scale < 1) {
         scale = 1;
     }
     scaleMatrix = getDirectionalScaleMatrix(Math.sqrt(scale), 1 / Math.sqrt(scale), -direction);
@@ -1389,10 +1436,10 @@ function handleMouseMoveUniformScale(pageMousePosition) {
     scale = y;//(Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)));
 
     if (y > 0) {
-        scale = 100+y;
-        scale = 1/(scale/100);
-    }else{
-        scale = y*-1;//make y positive
+        scale = 100 + y;
+        scale = 1 / (scale / 100);
+    } else {
+        scale = y * -1;//make y positive
         scale += 100;
         scale /= 100;
     }
