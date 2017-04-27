@@ -1107,18 +1107,28 @@ function buildReferenceAndInteractiveImageTrianglesByReferenceTriangleIndex(refe
     var addedReferenceTriangles = [];
     for (var i = 0; i < referenceTriangleAndIndex.length; i++) {
         var refTri = referenceTriangleAndIndex[i].triangle;
-        var intTri = interactiveTrianglesForAllSteps[referenceTriangleAndIndex[i].index];
+        var idx = referenceTriangleAndIndex[i].index;
+        var intTri = interactiveTrianglesForAllSteps[idx];
+
         //FIXME: this duplicate detection is a really horrible hack!!!
         if (containsMatchingTriangle(addedReferenceTriangles, refTri)) {
             //skip we don't want to add duplicate triangles
         } else {
-            ret.set(referenceTriangleAndIndex[i].index, {referenceTriangle: refTri, interactiveTriangle: intTri});
+            ret.set(idx, {referenceTriangle: refTri, interactiveTriangle: intTri});
             addedReferenceTriangles.push(refTri);
         }
     }
     return ret;
 }
 
+function getTableEntry(triangleString, key, area) {
+    var outputStr =
+        "<tr class=\"triangleTRAll triangleTR" + triangleString + "\" onmouseover=\"highlightTriangle(" + triangleString + ")\">" +
+        "<td>" + key.value + "</td>" +
+        "<td>" + Math.round(area) + " </td>" +
+        "</tr>";
+    return outputStr;
+}
 function draw() {
 
     //init variables
@@ -1208,20 +1218,15 @@ function draw() {
         //add triangles to side bar
 
         if (!g_skipListGen) {
-
-            $("#triangleListBody").html("");
+            var outputStr = "";
             var keys = g_triangleMapByReferenceTriangleIndex.keys();
             for (var key = keys.next(); !key.done; key = keys.next()) { //iterate over keys
                 var triangleString = key.value;
                 var tri = g_triangleMapByReferenceTriangleIndex.get(key.value).referenceTriangle;
                 var area = getArea(tri);
-                var outputStr =
-                    "<tr class=\"triangleTRAll triangleTR" + triangleString + "\" onmouseover=\"highlightTriangle(" + triangleString + ")\">" +
-                    "<td>" + key.value + "</td>" +
-                    "<td>" + Math.round(area) + " </td>" +
-                    "</tr>";
-                $("#triangleListBody").append(outputStr);
+                outputStr = outputStr + getTableEntry(triangleString, key, area);
             }
+            $("#triangleListBody").html(outputStr);
             $(".list-group-item").hover(function () {
                     $(this).addClass("active");
                 },
@@ -1230,7 +1235,7 @@ function draw() {
                 });
         }
         $("#number_of_triangles_output").html("Possible Matches: " + interactiveTrianglesForAllSteps.length);
-        $("#number_of_matching_triangles_output").html("Actual Matches: " + filteredReferenceImageTrianglesForAllSteps.length);
+        $("#number_of_matching_triangles_output").html("Actual Matches: " + g_triangleMapByReferenceTriangleIndex.size);
     }
     if (g_currentActiveCanvasId == INTERACTIVE_CANVAS_ID) {
         drawCroppingPoints(interactiveCanvasContext, interactiveTransformedCroppingPoints2, true);
