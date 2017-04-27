@@ -1420,10 +1420,8 @@ function handleMouseMoveNonUniformScale(pageMousePosition) {
     }
     direction = extraRotation % 360;
     scale = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
-    scale /= 25;
-    if (scale < 1) {
-        scale = 1;
-    }
+    scale += 50;//skip all the fractions, 1 is the minimum scale
+    scale /= 50;
     scaleMatrix = getDirectionalScaleMatrix(Math.sqrt(scale), 1 / Math.sqrt(scale), -direction);
     g_transformationChanges.directionalScaleMatrix = scaleMatrix;
 }
